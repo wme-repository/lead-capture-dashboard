@@ -21,7 +21,7 @@ decisions:
 metrics:
   duration: "5 min"
   completed: "2026-05-25"
-  tasks_completed: 1
+  tasks_completed: 2
   tasks_total: 2
   files_changed: 2
 ---
@@ -35,16 +35,7 @@ metrics:
 | Task | Name | Commit | Files |
 |------|------|--------|-------|
 | 1 | Add Source, Lead, SyncLog models to schema.prisma and generate SQL file | 4c576e0 | prisma/schema.prisma, sql/02-webhook-tables.sql |
-
-## Awaiting Human Action
-
-**Task 2** requires manual steps before this plan can be marked fully complete:
-
-1. Open Supabase Dashboard → SQL Editor → New query
-2. Paste the entire contents of `sql/02-webhook-tables.sql`
-3. Click "Run" — all three CREATE TABLE statements should succeed
-4. Run `npx prisma generate` in the project root
-5. Verify `src/generated/prisma/client/index.d.ts` contains `source`, `lead`, `syncLog` accessors
+| 2 | Run SQL in Supabase and regenerate Prisma client | manual | Supabase tables + src/generated/prisma/ |
 
 ## Deviations from Plan
 
@@ -63,3 +54,6 @@ None — no new network endpoints or auth paths introduced. Source.token stored 
 - `prisma/schema.prisma` contains `model Source`, `model Lead`, `model SyncLog` — FOUND
 - `sql/02-webhook-tables.sql` exists — FOUND
 - Commit `4c576e0` exists — FOUND
+- Tables `Source`, `Lead`, `SyncLog` created in Supabase via SQL Editor — CONFIRMED (human)
+- `npx prisma generate` completed without errors — CONFIRMED (human)
+- `src/generated/prisma/models/` contains `Lead.ts`, `Source.ts`, `SyncLog.ts` — CONFIRMED (human)
