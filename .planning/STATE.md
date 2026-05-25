@@ -9,8 +9,8 @@
 ## Current Position
 
 **Phase**: 1 — Foundation
-**Plan**: 3 of 4 complete
-**Status**: Plan 01-03 complete — admin user management page, seed script, server actions built
+**Plan**: 4 of 4 (paused at checkpoint — awaiting VPS deploy verification)
+**Status**: Plan 01-04 Task 1 complete — Dockerfile, docker-compose.yml, .dockerignore committed; awaiting human VPS deploy + Traefik config + smoke test
 
 ```
 Progress: [----------] 10% — 0/5 phases complete (3/4 plans in Phase 1)
@@ -65,6 +65,6 @@ None.
 
 ## Session Continuity
 
-**Last updated**: 2026-05-24 — plan 01-03 complete
-**Stopped at**: Plan 01-03 complete; next is 01-04-PLAN.md (Dockerfile + docker-compose + Traefik deploy)
-**Resume file**: .planning/phases/01-foundation/01-04-PLAN.md
+**Last updated**: 2026-05-25 — plan 01-04 Task 1 complete; paused at checkpoint
+**Stopped at**: Plan 01-04 Task 2 (checkpoint:human-verify) — VPS deploy + Traefik config + smoke test required
+**Resume file**: .planning/phases/01-foundation/01-04-PLAN.md (Task 2)
