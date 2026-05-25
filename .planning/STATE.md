@@ -9,18 +9,18 @@
 ## Current Position
 
 **Phase**: 1 — Foundation
-**Plan**: 2 of 4 complete
-**Status**: Plan 01-02 complete — middleware, login page, dashboard shell, role guards built
+**Plan**: 3 of 4 complete
+**Status**: Plan 01-03 complete — admin user management page, seed script, server actions built
 
 ```
-Progress: [----------] 10% — 0/5 phases complete (2/4 plans in Phase 1)
+Progress: [----------] 10% — 0/5 phases complete (3/4 plans in Phase 1)
 ```
 
 ## Phase Summary
 
 | Phase | Goal | Status |
 |-------|------|--------|
-| 1 - Foundation | Auth + infra running on VPS | In Progress (1/4 plans) |
+| 1 - Foundation | Auth + infra running on VPS | In Progress (3/4 plans) |
 | 2 - Webhook Ingestion | Both sites can POST leads to SQLite | Not started |
 | 3 - Integrations | Leads forwarded to Sheets + DataCrazy with retry | Not started |
 | 4 - Config UI | Sources and destinations managed from browser | Not started |
@@ -29,13 +29,14 @@ Progress: [----------] 10% — 0/5 phases complete (2/4 plans in Phase 1)
 ## Performance Metrics
 
 - Phases complete: 0/5
-- Requirements delivered: 2/22 (AUTH-01, AUTH-03 UI + route guards delivered)
-- Plans run: 1
+- Requirements delivered: 3/22 (AUTH-01, AUTH-02, AUTH-03 UI + route guards delivered)
+- Plans run: 3
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 01-foundation | 01 | 8 min | 3/3 | 9 created |
 | 01-foundation | 02 | 5 min | 3/3 | 5 created |
+| 01-foundation | 03 | 15 min | 2/2 | 4 created |
 
 ## Accumulated Context
 
@@ -43,6 +44,7 @@ Progress: [----------] 10% — 0/5 phases complete (2/4 plans in Phase 1)
 
 | Decision | Rationale |
 |----------|-----------|
+| Seed uses signUpEmail + Prisma role update | auth.api.createUser requires an active admin session which doesn't exist before first seed |
 | Next.js App Router | Fullstack single app — API Routes for webhooks, SSR for dashboard |
 | SQLite + Prisma | Zero-config local DB, ideal for standalone VPS |
 | Google Sheets via Service Account | No browser OAuth, fixed credential in .env |
@@ -63,6 +65,6 @@ None.
 
 ## Session Continuity
 
-**Last updated**: 2026-05-24 — plan 01-02 complete
-**Stopped at**: Plan 01-02 complete; next is 01-03-PLAN.md (Admin user management page + seed script)
-**Resume file**: .planning/phases/01-foundation/01-03-PLAN.md
+**Last updated**: 2026-05-24 — plan 01-03 complete
+**Stopped at**: Plan 01-03 complete; next is 01-04-PLAN.md (Dockerfile + docker-compose + Traefik deploy)
+**Resume file**: .planning/phases/01-foundation/01-04-PLAN.md

@@ -26,7 +26,7 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
 **Plans**: 4 plans
 - [x] 01-01-PLAN.md — Scaffold + Prisma schema + better-auth server wiring
 - [x] 01-02-PLAN.md — Middleware + login page + dashboard shell + role guards
-- [ ] 01-03-PLAN.md — Admin user management page + seed script
+- [x] 01-03-PLAN.md — Admin user management page + seed script
 - [ ] 01-04-PLAN.md — Dockerfile + docker-compose + Traefik deploy
 **UI hint**: yes
 
@@ -83,7 +83,7 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 2/4 | In Progress | - |
+| 1. Foundation | 3/4 | In Progress | - |
 | 2. Webhook Ingestion | 0/? | Not started | - |
 | 3. Integrations | 0/? | Not started | - |
 | 4. Config UI | 0/? | Not started | - |
