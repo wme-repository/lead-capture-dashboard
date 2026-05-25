@@ -4,7 +4,7 @@
 
 ### Webhook / Ingestão
 
-- [ ] **HOOK-01**: Sistema aceita POST em `/api/webhook/:sourceId` com payload de lead padrão (name, email, phone, utm_source, utm_medium, utm_campaign, utm_term, utm_content)
+- [ ] **HOOK-01**: Sistema aceita POST em `/api/webhook/:slug` com payload de lead padrão (name, email, phone, utm_source, utm_medium, utm_campaign, utm_term, utm_content); slug identifica a captação (ex: `trt`, `outra-campanha`)
 - [ ] **HOOK-02**: Sistema aceita POST com schema de questionário + leadscore (name, email, respostas do questionário, score numérico, classificação A/B/C/D)
 - [ ] **HOOK-03**: Webhook valida campos obrigatórios e formato de email; retorna 422 para payloads inválidos
 - [ ] **HOOK-04**: Webhook exige token de autenticação no header `X-Webhook-Token`; retorna 401 sem token correto

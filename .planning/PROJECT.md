@@ -11,7 +11,8 @@ Sistema de captação de leads com interface visual web — recebe webhooks de s
 ## Context
 
 - **Stack:** Next.js (App Router) + SQLite (via Prisma) + Google Sheets API (Service Account) + DataCrazy (webhook POST)
-- **Deploy:** VPS Hostinger 69.62.89.206 com Traefik; subdomínio a definir em esqtools.com
+- **Deploy:** VPS Hostinger 69.62.89.206 com Traefik; subdomínio: `leads.esqtools.com` (DNS-only, sem proxy Cloudflare)
+- **Roteamento:** um app, múltiplas captações por slug — `leads.esqtools.com/trt`, `leads.esqtools.com/outra-campanha`; webhooks em `/api/webhook/:slug`
 - **Auth:** Multi-usuário (login simples admin + usuários)
 - **Fontes de lead:** 2 sites com schemas distintos:
   - Site 1: name, email, phone, UTMs (captação padrão)
