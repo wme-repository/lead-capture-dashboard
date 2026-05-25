@@ -1,19 +1,16 @@
+import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const dbUrl = (process.env.DATABASE_URL ?? "file:./prisma/dev.db")
-  .replace(/^file:/, "")
-  .split("?")[0];
-
-const adapter = new PrismaBetterSqlite3({ url: dbUrl, timeout: 5000 });
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter } as never);
 
 // Standalone auth instance for seeding (no nextCookies — not a Next.js context)
 const auth = betterAuth({
-  database: prismaAdapter(prisma, { provider: "sqlite" }),
+  database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: { enabled: true },
   plugins: [admin()],
 });
