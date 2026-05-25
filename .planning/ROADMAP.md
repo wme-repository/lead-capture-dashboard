@@ -6,8 +6,8 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
 
 ## Phases
 
-- [ ] **Phase 1: Foundation** — Next.js project scaffolding, Prisma/SQLite schema, deploy infra with Traefik, and multi-user authentication
-- [ ] **Phase 2: Webhook Ingestion** — Dual-schema webhook endpoints with validation and token auth, persisting all leads and sync logs to SQLite
+- [x] **Phase 1: Foundation** — Next.js project scaffolding, Prisma/PostgreSQL schema, deploy infra with Traefik, and multi-user authentication
+- [ ] **Phase 2: Webhook Ingestion** — Dual-schema webhook endpoints with validation and token auth, persisting all leads and sync logs to PostgreSQL
 - [ ] **Phase 3: Integrations** — Google Sheets append and DataCrazy POST per source, with retry queue and sync status tracking
 - [ ] **Phase 4: Config UI** — Source management interface: create sources, configure Sheets/DataCrazy destinations, copy webhook URLs
 - [ ] **Phase 5: Analytics Dashboard** — Charts (hourly/daily leads), UTM breakdown, leadscore distribution, paginated lead list with real-time updates
@@ -27,11 +27,11 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
 - [x] 01-01-PLAN.md — Scaffold + Prisma schema + better-auth server wiring
 - [x] 01-02-PLAN.md — Middleware + login page + dashboard shell + role guards
 - [x] 01-03-PLAN.md — Admin user management page + seed script
-- [ ] 01-04-PLAN.md — Dockerfile + docker-compose + Traefik deploy
+- [x] 01-04-PLAN.md — Dockerfile + docker-compose + Traefik deploy
 **UI hint**: yes
 
 ### Phase 2: Webhook Ingestion
-**Goal**: Both sites can POST leads that are reliably saved to SQLite
+**Goal**: Both sites can POST leads that are reliably saved to PostgreSQL
 **Depends on**: Phase 1
 **Requirements**: HOOK-01, HOOK-02, HOOK-03, HOOK-04, DATA-01, DATA-02
 **Success Criteria** (what must be TRUE):
@@ -40,7 +40,10 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
   3. A POST missing required fields or with invalid email returns 422
   4. A POST without the correct `X-Webhook-Token` header returns 401
   5. Each sync attempt (pending/synced/failed) is recorded in the sync log table
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 02-01-PLAN.md — Source/Lead/SyncLog schema models + raw SQL migration + prisma generate
+- [ ] 02-02-PLAN.md — Zod validation schemas + POST /api/webhook/[slug] route handler
+- [ ] 02-03-PLAN.md — Container redeploy + end-to-end curl verification
 
 ### Phase 3: Integrations
 **Goal**: Every saved lead is automatically forwarded to Google Sheets and DataCrazy, with failures retried
@@ -83,8 +86,8 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 3/4 | In Progress | - |
-| 2. Webhook Ingestion | 0/? | Not started | - |
+| 1. Foundation | 4/4 | Complete | 2026-05-25 |
+| 2. Webhook Ingestion | 0/3 | In Progress | - |
 | 3. Integrations | 0/? | Not started | - |
 | 4. Config UI | 0/? | Not started | - |
 | 5. Analytics Dashboard | 0/? | Not started | - |
