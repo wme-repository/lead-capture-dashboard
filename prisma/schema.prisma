@@ -64,8 +64,12 @@ model Source {
   name       String
   slug       String   @unique
   token      String   @unique
-  schemaType String   @default("standard")
-  createdAt  DateTime @default(now())
+  schemaType   String   @default("standard")
+  sheetsId     String?
+  sheetTab     String?
+  dataCrazyUrl String?
+  fieldMapping Json?
+  createdAt    DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   leads Lead[]
