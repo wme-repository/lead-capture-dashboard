@@ -2,7 +2,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install --frozen-lockfile
 
 COPY . .
 RUN npx prisma generate
@@ -20,15 +20,12 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Copy prisma client and schema for migrate deploy
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Copy generated prisma client (Prisma 7 generates to src/generated/prisma)
+COPY --from=builder /app/src/generated ./src/generated
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/prisma ./prisma
-
-# Install prisma CLI in runner stage (needed for migrate deploy)
-RUN npm install -g prisma
+COPY --from=builder /app/node_modules/pg ./node_modules/pg
+COPY --from=builder /app/node_modules/@prisma/adapter-pg ./node_modules/@prisma/adapter-pg
 
 EXPOSE 3000
 
-# Run migrations then start — prisma migrate deploy is non-interactive (safe for Docker)
-CMD ["sh", "-c", "prisma migrate deploy && node server.js"]
+CMD ["node", "server.js"]
