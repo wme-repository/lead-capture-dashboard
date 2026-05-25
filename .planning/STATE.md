@@ -8,12 +8,12 @@
 
 ## Current Position
 
-**Phase**: 2 — Webhook Ingestion
-**Plan**: 2 of 3 (Wave 3 pending — deploy + verify)
-**Status**: Code complete; awaiting container rebuild + E2E curl verification
+**Phase**: 3 — Integrations
+**Plan**: Not started
+**Status**: Phase 2 complete — webhook ingestion live and verified
 
 ```
-Progress: [##--------] 20% — 1/5 phases complete
+Progress: [#####-----] 40% — 2/5 phases complete
 ```
 
 ## Phase Summary
@@ -21,16 +21,16 @@ Progress: [##--------] 20% — 1/5 phases complete
 | Phase | Goal | Status |
 |-------|------|--------|
 | 1 - Foundation | Auth + infra running on VPS | ✅ Complete (2026-05-25) |
-| 2 - Webhook Ingestion | Both sites can POST leads to PostgreSQL | In Progress |
+| 2 - Webhook Ingestion | Both sites can POST leads to PostgreSQL | ✅ Complete (2026-05-25) |
 | 3 - Integrations | Leads forwarded to Sheets + DataCrazy with retry | Not started |
 | 4 - Config UI | Sources and destinations managed from browser | Not started |
 | 5 - Analytics Dashboard | Lead volume, origin, quality visible in real time | Not started |
 
 ## Performance Metrics
 
-- Phases complete: 1/5
+- Phases complete: 2/5
 - Requirements delivered: 9/22 (AUTH-01, AUTH-02, AUTH-03, HOOK-01, HOOK-02, HOOK-03, HOOK-04, DATA-01, DATA-02)
-- Plans run: 6
+- Plans run: 7
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -40,6 +40,7 @@ Progress: [##--------] 20% — 1/5 phases complete
 | 01-foundation | 04 | 2 days | deploy | VPS live |
 | 02-webhook-ingestion | 01 | 5 min | 2/2 | 2 created |
 | 02-webhook-ingestion | 02 | 10 min | 2/2 | 2 created |
+| 02-webhook-ingestion | 03 | 15 min | 2/2 | E2E verified (6/6 tests) |
 
 ## Accumulated Context
 
@@ -56,6 +57,8 @@ Progress: [##--------] 20% — 1/5 phases complete
 | Google Sheets via Service Account | No browser OAuth, fixed credential in .env |
 | DataCrazy as configurable webhook POST | API undocumented — treat as simple configurable endpoint |
 | Multi-site as "sources" | Each source has its own schema, Sheets destination, and CRM destination |
+| Test source seeded via SQL | Source slug="test", token="test-webhook-token-change-me", schemaType="standard" |
+| Questionnaire source via DB insert | Source slug="quest", token="quest-webhook-token", schemaType="questionnaire" |
 
 ### Infrastructure Notes
 
@@ -63,6 +66,7 @@ Progress: [##--------] 20% — 1/5 phases complete
 - Traefik: `leads-custom.yaml` at `/etc/easypanel/traefik/config/` routes `leads.esqtools.com` → `app_leads_01leads:80`
 - Database: Supabase PostgreSQL, tables created via raw SQL (migration tooling doesn't work with Transaction pooler)
 - Admin seed: `admin@esqtools.com` / `ChangeMe123!` (must change on first login)
+- VPS access: root@69.62.89.206, SSH key not configured — use password
 
 ### Blockers
 
@@ -75,6 +79,6 @@ None.
 
 ## Session Continuity
 
-**Last updated**: 2026-05-25 — Phase 2 code complete, awaiting deploy + E2E verify
-**Stopped at**: Plan 02-03 (deploy + curl verification) pending
-**Resume**: Rebuild container on Easypanel, then run 6 curl tests from 02-03-PLAN.md
+**Last updated**: 2026-05-25 — Phase 2 complete, all 6 E2E tests passed
+**Stopped at**: Phase 2 verified, ready for Phase 3 planning
+**Resume**: Run /gsd-plan-phase for Phase 3 — Integrations (Google Sheets + DataCrazy forwarding with retry)

@@ -7,7 +7,7 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
 ## Phases
 
 - [x] **Phase 1: Foundation** — Next.js project scaffolding, Prisma/PostgreSQL schema, deploy infra with Traefik, and multi-user authentication
-- [ ] **Phase 2: Webhook Ingestion** — Dual-schema webhook endpoints with validation and token auth, persisting all leads and sync logs to PostgreSQL
+- [x] **Phase 2: Webhook Ingestion** — Dual-schema webhook endpoints with validation and token auth, persisting all leads and sync logs to PostgreSQL
 - [ ] **Phase 3: Integrations** — Google Sheets append and DataCrazy POST per source, with retry queue and sync status tracking
 - [ ] **Phase 4: Config UI** — Source management interface: create sources, configure Sheets/DataCrazy destinations, copy webhook URLs
 - [ ] **Phase 5: Analytics Dashboard** — Charts (hourly/daily leads), UTM breakdown, leadscore distribution, paginated lead list with real-time updates
@@ -41,9 +41,9 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
   4. A POST without the correct `X-Webhook-Token` header returns 401
   5. Each sync attempt (pending/synced/failed) is recorded in the sync log table
 **Plans**: 3 plans
-- [ ] 02-01-PLAN.md — Source/Lead/SyncLog schema models + raw SQL migration + prisma generate
-- [ ] 02-02-PLAN.md — Zod validation schemas + POST /api/webhook/[slug] route handler
-- [ ] 02-03-PLAN.md — Container redeploy + end-to-end curl verification
+- [x] 02-01-PLAN.md — Source/Lead/SyncLog schema models + raw SQL migration + prisma generate
+- [x] 02-02-PLAN.md — Zod validation schemas + POST /api/webhook/[slug] route handler
+- [x] 02-03-PLAN.md — Container redeploy + end-to-end curl verification
 
 ### Phase 3: Integrations
 **Goal**: Every saved lead is automatically forwarded to Google Sheets and DataCrazy, with failures retried
@@ -87,7 +87,7 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete | 2026-05-25 |
-| 2. Webhook Ingestion | 0/3 | In Progress | - |
+| 2. Webhook Ingestion | 3/3 | Complete | 2026-05-25 |
 | 3. Integrations | 0/? | Not started | - |
 | 4. Config UI | 0/? | Not started | - |
 | 5. Analytics Dashboard | 0/? | Not started | - |
