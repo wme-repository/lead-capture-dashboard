@@ -76,13 +76,25 @@ model Source {
 }
 
 model Lead {
-  id         String   @id @default(cuid())
-  sourceId   String
-  schemaType String
-  fields     Json
-  status     String   @default("pending")
-  receivedAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String   @id @default(cuid())
+  sourceId    String
+  schemaType  String
+  // Standard fields
+  name        String?
+  email       String?
+  phone       String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmTerm     String?
+  utmContent  String?
+  // Questionnaire fields
+  score       Int?
+  grade       String?
+  answers     Json?
+  status      String   @default("pending")
+  receivedAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   source   Source    @relation(fields: [sourceId], references: [id])
   syncLogs SyncLog[]

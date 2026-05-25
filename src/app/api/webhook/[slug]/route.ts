@@ -44,16 +44,38 @@ export async function POST(
     );
   }
 
-  // 5. Atomic write: lead + two SyncLog rows (one per destination)
-  const lead = await prisma.$transaction(async (tx) => {
-    const newLead = await tx.lead.create({
-      data: {
+  // 5. Map validated data to individual columns
+  const data = result.data;
+  const isQuestionnaire = source.schemaType === "questionnaire";
+
+  const leadData = isQuestionnaire
+    ? {
         sourceId: source.id,
         schemaType: source.schemaType,
-        fields: result.data as Prisma.InputJsonValue,
+        name: data.name,
+        email: data.email,
+        score: (data as { score: number }).score,
+        grade: (data as { grade: string }).grade,
+        answers: (data as { answers: Record<string, unknown> }).answers as Prisma.InputJsonValue,
         status: "pending",
-      },
-    });
+      }
+    : {
+        sourceId: source.id,
+        schemaType: source.schemaType,
+        name: data.name,
+        email: data.email,
+        phone: (data as { phone?: string }).phone ?? null,
+        utmSource: (data as { utm_source?: string }).utm_source ?? null,
+        utmMedium: (data as { utm_medium?: string }).utm_medium ?? null,
+        utmCampaign: (data as { utm_campaign?: string }).utm_campaign ?? null,
+        utmTerm: (data as { utm_term?: string }).utm_term ?? null,
+        utmContent: (data as { utm_content?: string }).utm_content ?? null,
+        status: "pending",
+      };
+
+  // 6. Atomic write: lead + two SyncLog rows (one per destination)
+  const lead = await prisma.$transaction(async (tx) => {
+    const newLead = await tx.lead.create({ data: leadData });
 
     await tx.syncLog.createMany({
       data: [
