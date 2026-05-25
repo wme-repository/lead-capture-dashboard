@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { triggerIntegrations } from "@/lib/integrations/trigger";
 import {
   StandardLeadSchema,
   QuestionnaireLeadSchema,
@@ -86,6 +87,17 @@ export async function POST(
 
     return newLead;
   });
+
+  // 7. Trigger integrations (non-fatal — retry cron will pick up failures)
+  try {
+    const leadWithRelations = await prisma.lead.findUniqueOrThrow({
+      where: { id: lead.id },
+      include: { source: true, syncLogs: true },
+    });
+    await triggerIntegrations(leadWithRelations);
+  } catch (err) {
+    console.error("[webhook] triggerIntegrations error:", err);
+  }
 
   return NextResponse.json({ id: lead.id }, { status: 200 });
 }
