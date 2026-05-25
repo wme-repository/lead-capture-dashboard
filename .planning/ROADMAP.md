@@ -54,7 +54,11 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
   2. A new lead triggers a POST to the DataCrazy webhook URL for that source
   3. If either destination fails, the lead is queued and retried with exponential backoff without manual intervention
   4. The lead list shows per-lead sync status: synced, pending, or failed
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 03-01-PLAN.md — Schema migration: Source table + prisma generate
+- [ ] 03-02-PLAN.md — Integration libs: sheets.ts, datacrazy.ts, retry.ts, trigger.ts + unit tests
+- [ ] 03-03-PLAN.md — Cron retry route + webhook wiring + leads API endpoint
+- [ ] 03-04-PLAN.md — Env injection, redeploy, E2E verification
 
 ### Phase 4: Config UI
 **Goal**: User can fully configure sources and destinations from the browser without touching code or env files
@@ -88,7 +92,7 @@ Receive leads from multiple sites, guarantee none are lost, and provide immediat
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete | 2026-05-25 |
 | 2. Webhook Ingestion | 3/3 | Complete | 2026-05-25 |
-| 3. Integrations | 0/? | Not started | - |
+| 3. Integrations | 0/4 | Not started | - |
 | 4. Config UI | 0/? | Not started | - |
 | 5. Analytics Dashboard | 0/? | Not started | - |
 
