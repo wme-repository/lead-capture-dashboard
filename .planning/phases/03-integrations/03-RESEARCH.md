@@ -391,22 +391,22 @@ const rows = await prisma.syncLog.findMany({
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **DataCrazy field mapping format**
    - What we know: DataCrazy endpoint is undocumented; context says "configurable URL and field mapping"
    - What's unclear: Does DataCrazy require specific field names, a specific auth header, or a specific content-type?
-   - Recommendation: Confirm with project owner before coding `datacrazy.ts`. If unknown at plan time, implement as fully configurable (URL + arbitrary JSON key mapping) — the Phase 4 Config UI will populate these fields anyway.
+   - RESOLVED: Implement as fully configurable (URL + arbitrary JSON key mapping via `fieldMapping` JSONB on Source). Phase 4 Config UI will populate these fields. DataCrazy unknown details are deferred — implementation proceeds with configurable approach, real credentials injected in Plan 03-04.
 
 2. **Webhook response latency tolerance**
    - What we know: Synchronous trigger adds latency to webhook response; sites posting leads are waiting
    - What's unclear: Is 200-500ms of added latency acceptable for the calling sites?
-   - Recommendation: Default to synchronous (simpler, ensures first attempt happens immediately). If latency becomes an issue, switch to immediate return + SyncLog-only retry.
+   - RESOLVED: Synchronous trigger is acceptable — leads are the core value, and immediate first-attempt is preferable. Errors caught and logged without returning 5xx to caller (lead is always saved). If latency becomes an issue post-deploy, switch to SyncLog-only retry.
 
 3. **Google Service Account credentials availability**
    - What we know: STATE.md notes "Obtain Google Service Account credentials before Phase 3"
    - What's unclear: Whether credentials exist yet
-   - Recommendation: Phase 3 plan should include an explicit task to provision and inject `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY` env vars before testing INT-01.
+   - RESOLVED: Plan 03-04 includes an explicit checkpoint task to provision and inject `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY` env vars before E2E testing. All integration code is written in Plans 03-01 to 03-03 without blocking on credentials.
 
 ---
 
