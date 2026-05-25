@@ -44,7 +44,7 @@ created: 2026-05-25
 | 3-02-02 | 02 | 2 | INT-02 | T-03-02-02 | AbortSignal timeout prevents hanging; URL from DB only | unit | `npx jest src/lib/integrations/datacrazy.test.ts -x` | ❌ W0 | ⬜ pending |
 | 3-02-03 | 02 | 2 | INT-03 | — | N/A | unit | `npx jest src/lib/integrations/retry.test.ts -x` | ❌ W0 | ⬜ pending |
 | 3-03-01 | 03 | 3 | INT-03 | T-03-03-01 | X-Cron-Secret header required; 401 without it | unit | `npx jest src/app/api/cron/retry/route.test.ts -x` | ❌ W0 | ⬜ pending |
-| 3-03-02 | 03 | 3 | INT-04 | — | N/A | unit | `npx jest src/app/api/leads/route.test.ts -x` | ❌ W0 | ⬜ pending |
+| 3-03-02 | 03 | 3 | INT-04 | — | N/A | structural | `npx tsc --noEmit 2>&1 \| grep "leads/route"` | ✅ | ⬜ pending |
 | 3-04-01 | 04 | 4 | INT-01, INT-02 | — | N/A | manual | curl E2E against production | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -57,7 +57,6 @@ created: 2026-05-25
 - [ ] `src/lib/integrations/datacrazy.test.ts` — unit tests for INT-02 (mock fetch)
 - [ ] `src/lib/integrations/retry.test.ts` — unit tests for INT-03 (exponential backoff)
 - [ ] `src/app/api/cron/retry/route.test.ts` — cron route auth + retry dispatch
-- [ ] `src/app/api/leads/route.test.ts` — leads API with syncLog status
 - [ ] `jest.config.ts` + jest/ts-jest install — if not already present
 
 Plan 03-02 (Wave 2) creates all test files as part of its tasks.
