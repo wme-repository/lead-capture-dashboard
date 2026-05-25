@@ -9,8 +9,8 @@
 ## Current Position
 
 **Phase**: 2 — Webhook Ingestion
-**Plan**: 0 of ? (not started)
-**Status**: Phase 1 complete — app live at https://leads.esqtools.com, login working
+**Plan**: 2 of 3 (Wave 3 pending — deploy + verify)
+**Status**: Code complete; awaiting container rebuild + E2E curl verification
 
 ```
 Progress: [##--------] 20% — 1/5 phases complete
@@ -29,8 +29,8 @@ Progress: [##--------] 20% — 1/5 phases complete
 ## Performance Metrics
 
 - Phases complete: 1/5
-- Requirements delivered: 3/22 (AUTH-01, AUTH-02, AUTH-03)
-- Plans run: 4
+- Requirements delivered: 9/22 (AUTH-01, AUTH-02, AUTH-03, HOOK-01, HOOK-02, HOOK-03, HOOK-04, DATA-01, DATA-02)
+- Plans run: 6
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -38,6 +38,8 @@ Progress: [##--------] 20% — 1/5 phases complete
 | 01-foundation | 02 | 5 min | 3/3 | 5 created |
 | 01-foundation | 03 | 15 min | 2/2 | 4 created |
 | 01-foundation | 04 | 2 days | deploy | VPS live |
+| 02-webhook-ingestion | 01 | 5 min | 2/2 | 2 created |
+| 02-webhook-ingestion | 02 | 10 min | 2/2 | 2 created |
 
 ## Accumulated Context
 
@@ -73,6 +75,6 @@ None.
 
 ## Session Continuity
 
-**Last updated**: 2026-05-25 — Phase 1 complete, app live at leads.esqtools.com
-**Stopped at**: Phase 2 planning not started
-**Resume**: Run /gsd-plan-phase for Phase 2 — Webhook Ingestion
+**Last updated**: 2026-05-25 — Phase 2 code complete, awaiting deploy + E2E verify
+**Stopped at**: Plan 02-03 (deploy + curl verification) pending
+**Resume**: Rebuild container on Easypanel, then run 6 curl tests from 02-03-PLAN.md
