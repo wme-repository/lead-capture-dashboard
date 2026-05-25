@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    container_name: leads_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/app/prisma/data/prod.db?_journal_mode=WAL&busy_timeout=5000
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:-admin@esqtools.com}
+      - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:-ChangeMe123!}
+    volumes:
+      - leads_data:/app/prisma/data
+    networks:
+      - easypanel
+
+volumes:
+  leads_data:
+
+networks:
+  easypanel:
+    external: true
+    name: easypanel

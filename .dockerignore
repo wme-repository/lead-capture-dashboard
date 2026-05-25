@@ -1,0 +1,9 @@
+node_modules
+.next
+.env
+*.local
+prisma/*.db
+prisma/*.db-wal
+prisma/*.db-shm
+.git
+.planning
