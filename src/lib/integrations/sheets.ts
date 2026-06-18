@@ -47,18 +47,30 @@ function buildStandardRow(lead: LeadFields, date: Date): unknown[] {
   ];
 }
 
-// Leadscore sheet: A=Hora | B=Data | C=Nome | D=Email | E=Telefone
-// F–P=respostas do questionário (em ordem de envio) | Q=LeadScore | R=Nota Lead Faixa
+// Leadscore sheet columns F→P — fixed order matching spreadsheet headers
+const QUESTIONNAIRE_KEYS = [
+  'nivel_concursos',
+  'estudou_tribunal',
+  'conhece_thallius',
+  'motivo_projeto',
+  'idade',
+  'renda',
+  'genero',
+  'escolaridade',
+  'situacao',
+  'tempo_esquadrao',
+  'expectativas',
+];
+
 function buildQuestionnaireRow(lead: LeadFields, date: Date): unknown[] {
   const answers = (lead.answers as Record<string, unknown>) ?? {};
-  const answerValues = Object.values(answers).map((v) => v ?? '');
   return [
     formatTime(date),
     formatDate(date),
     lead.name ?? '',
     lead.email ?? '',
     lead.phone ?? '',
-    ...answerValues,
+    ...QUESTIONNAIRE_KEYS.map((k) => answers[k] ?? ''),
     lead.score ?? '',
     lead.grade ?? '',
   ];
