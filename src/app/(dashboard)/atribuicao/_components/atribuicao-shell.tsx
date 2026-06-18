@@ -53,7 +53,7 @@ const TABS: { key: Tab; label: string }[] = [
 const ORIGIN_COLORS: Record<string, string> = {
   "Meta Ads": "bg-blue-500",
   "Orgânico": "bg-emerald-500",
-  "Direto": "bg-gray-400",
+  "Sem classificação - sem UTM": "bg-gray-400",
   "Google": "bg-amber-500",
   "WhatsApp": "bg-green-500",
   "Referral": "bg-purple-500",
@@ -63,7 +63,7 @@ const ORIGIN_COLORS: Record<string, string> = {
 const ORIGIN_BADGE: Record<string, string> = {
   "Meta Ads": "bg-blue-100 text-blue-700",
   "Orgânico": "bg-emerald-100 text-emerald-700",
-  "Direto": "bg-gray-100 text-gray-600",
+  "Sem classificação - sem UTM": "bg-gray-100 text-gray-600",
   "Google": "bg-amber-100 text-amber-700",
   "WhatsApp": "bg-green-100 text-green-700",
   "Referral": "bg-purple-100 text-purple-700",

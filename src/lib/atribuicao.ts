@@ -24,7 +24,7 @@ function has(v: string, ...needles: string[]) {
 export type MacroOrigin =
   | "Meta Ads"
   | "Orgânico"
-  | "Direto"
+  | "Sem classificação - sem UTM"
   | "Google"
   | "WhatsApp"
   | "Referral"
@@ -55,7 +55,7 @@ export function classifyOrigin(
 
   if (has(med, "referral") || (src && !med)) return "Referral";
 
-  if (!src && !med) return "Direto";
+  if (!src && !med) return "Sem classificação - sem UTM";
 
   return "Não identificado";
 }
@@ -65,7 +65,7 @@ export type Platform =
   | "Facebook"
   | "Google"
   | "WhatsApp"
-  | "Direto"
+  | "Sem classificação - sem UTM"
   | "Orgânico"
   | "Referral"
   | "Não identificado";
@@ -87,7 +87,7 @@ export function classifyPlatform(
   const origin = classifyOrigin(utmSource, utmMedium, utmContent);
   if (origin === "Meta Ads") return "Facebook";
   if (origin === "Orgânico") return "Orgânico";
-  if (origin === "Direto") return "Direto";
+  if (origin === "Sem classificação - sem UTM") return "Sem classificação - sem UTM";
   if (origin === "Referral") return "Referral";
 
   return "Não identificado";
@@ -141,7 +141,7 @@ export function classifyPlacement(
 
   if (!utmContent && !utmTerm) {
     const origin = classifyOrigin(utmSource, utmMedium, utmContent);
-    if (origin === "Direto") return "Direto";
+    if (origin === "Sem classificação - sem UTM") return "Sem classificação - sem UTM";
   }
 
   return "Não identificado";
@@ -466,7 +466,7 @@ export async function getAtribuicaoData(opts: {
   if (noSrc > 0) utmAlerts.push(`${noSrc} lead${noSrc > 1 ? "s" : ""} chegou sem utm_source.`);
   const noMed = filtered.filter((l) => l.utmSource && !l.utmMedium).length;
   if (noMed > 0) utmAlerts.push(`${noMed} lead${noMed > 1 ? "s" : ""} chegou sem utm_medium.`);
-  const directCount = filtered.filter((l) => l.origin === "Direto").length;
+  const directCount = filtered.filter((l) => l.origin === "Sem classificação - sem UTM").length;
   if (directCount > 0) utmAlerts.push(`${directCount} lead${directCount > 1 ? "s" : ""} classificado${directCount > 1 ? "s" : ""} como Direto por ausência de UTM.`);
 
   // Filter options
