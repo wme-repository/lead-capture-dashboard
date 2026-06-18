@@ -35,7 +35,7 @@ export default function Sidebar({
   return (
     <aside className="hidden md:flex w-[200px] shrink-0 flex-col gap-5 border-r border-gray-200 bg-white px-3 py-4">
       <div className="flex items-center gap-2 px-2">
-        <Image src="/logo-esq.png" alt="Esquadrão de Elite" width={28} height={28} className="rounded-lg" />
+        <Image src="/logo-esq.png" alt="Esquadrão de Elite" width={28} height={28} className="h-7 w-7 shrink-0 rounded-lg object-contain" />
         <span className="text-sm font-semibold text-gray-800">Leads Dashboard</span>
       </div>
 
