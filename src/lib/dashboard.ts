@@ -32,14 +32,24 @@ export type Metric = {
   series: number[];
 };
 
+export type SyncStats = {
+  total: number;
+  synced: number;
+  pending: number;
+  failed: number;
+  syncPct: number;
+};
+
 export type DashboardData = {
   total: Metric;
   today: Metric;
   lastHour: Metric;
   scoreAB: Metric & { hasGraded: boolean };
+  sync: SyncStats;
   chart: { label: string; value: number }[];
-  origin: { label: string; count: number }[];
+  origin: { label: string; count: number; pct: number }[];
   periodDays: number;
+  topOrigin: string | null;
 };
 
 export async function getDashboardData(
@@ -53,13 +63,31 @@ export async function getDashboardData(
   const spanDays = Math.max(periodDays * 2, 14) + 1;
   const spanStart = new Date(now.getTime() - spanDays * DAY_MS);
 
-  const [totalAllTime, rows] = await Promise.all([
+  const [totalAllTime, rows, syncGroups] = await Promise.all([
     prisma.lead.count({ where }),
     prisma.lead.findMany({
       where: { ...where, receivedAt: { gte: spanStart } },
       select: { receivedAt: true, grade: true, utmSource: true },
     }),
+    prisma.syncLog.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    }),
   ]);
+
+  const syncMap: Record<string, number> = {};
+  for (const g of syncGroups) syncMap[g.status] = g._count._all;
+  const syncTotal = Object.values(syncMap).reduce((a, b) => a + b, 0);
+  const syncDone = (syncMap['done'] ?? 0) + (syncMap['synced'] ?? 0);
+  const syncFailed = syncMap['failed'] ?? 0;
+  const syncPending = syncTotal - syncDone - syncFailed;
+  const sync: SyncStats = {
+    total: syncTotal,
+    synced: syncDone,
+    pending: syncPending,
+    failed: syncFailed,
+    syncPct: syncTotal > 0 ? Math.round((syncDone / syncTotal) * 100) : 100,
+  };
 
   const between = (a: Date, b: Date) =>
     rows.filter((r) => r.receivedAt >= a && r.receivedAt < b).length;
@@ -169,10 +197,12 @@ export async function getDashboardData(
     const k = r.utmSource || "direto";
     originMap.set(k, (originMap.get(k) ?? 0) + 1);
   }
+  const originTotal = [...originMap.values()].reduce((a, b) => a + b, 0);
   const origin = [...originMap.entries()]
-    .map(([label, count]) => ({ label, count }))
+    .map(([label, count]) => ({ label, count, pct: originTotal > 0 ? Math.round((count / originTotal) * 100) : 0 }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
+  const topOrigin = origin.length > 0 ? origin[0].label : null;
 
   return {
     total: { value: totalAllTime, delta: pctChange(newCur, newPrev), series: totalSeries },
@@ -188,8 +218,10 @@ export async function getDashboardData(
       series: scoreSeries,
       hasGraded: gradedCur > 0,
     },
+    sync,
     chart,
     origin,
     periodDays,
+    topOrigin,
   };
 }
