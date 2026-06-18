@@ -19,7 +19,7 @@ function formatTime(d: Date): string {
 }
 
 export async function appendLeadToSheet(
-  source: Pick<Source, 'sheetsId' | 'sheetTab'>,
+  source: Pick<Source, 'sheetsId' | 'sheetTab' | 'schemaType'>,
   lead: Pick<
     Lead,
     | 'name' | 'email' | 'phone'
@@ -51,6 +51,9 @@ export async function appendLeadToSheet(
     lead.utmSource ?? '',      // K - utm_source
     lead.utmContent ?? '',     // L - utm_content
     lead.utmTerm ?? '',        // M - utm_term
+    ...(source.schemaType === 'questionnaire'
+      ? [lead.score ?? '', lead.grade ?? '']  // N - Score | O - Grade
+      : []),
   ];
 
   const sheets = getSheetsClient();
