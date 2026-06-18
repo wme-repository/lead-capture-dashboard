@@ -18,43 +18,62 @@ function formatTime(d: Date): string {
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+type LeadFields = Pick<
+  Lead,
+  | 'name' | 'email' | 'phone'
+  | 'paginaCaptura' | 'pesquisa' | 'grupo'
+  | 'utmCampaign' | 'utmMedium' | 'utmSource' | 'utmContent' | 'utmTerm'
+  | 'score' | 'grade' | 'answers'
+  | 'receivedAt'
+>;
+
+// Captação sheet: A=Data | B=Hora | C=Nome | D=Telefone | E=Página de Captura
+// F=Pesquisa | G=Grupo | H=utm_campaign | I=utm_medium | J=utm_source | K=utm_content | L=utm_term
+function buildStandardRow(lead: LeadFields, date: Date): unknown[] {
+  return [
+    formatDate(date),
+    formatTime(date),
+    lead.name ?? '',
+    lead.phone ?? '',
+    lead.paginaCaptura ?? '',
+    lead.pesquisa ?? '',
+    lead.grupo ?? '',
+    lead.utmCampaign ?? '',
+    lead.utmMedium ?? '',
+    lead.utmSource ?? '',
+    lead.utmContent ?? '',
+    lead.utmTerm ?? '',
+  ];
+}
+
+// Leadscore sheet: A=Hora | B=Data | C=Nome | D=Email | E=Telefone
+// F–P=respostas do questionário (em ordem de envio) | Q=LeadScore | R=Nota Lead Faixa
+function buildQuestionnaireRow(lead: LeadFields, date: Date): unknown[] {
+  const answers = (lead.answers as Record<string, unknown>) ?? {};
+  const answerValues = Object.values(answers).map((v) => v ?? '');
+  return [
+    formatTime(date),
+    formatDate(date),
+    lead.name ?? '',
+    lead.email ?? '',
+    lead.phone ?? '',
+    ...answerValues,
+    lead.score ?? '',
+    lead.grade ?? '',
+  ];
+}
+
 export async function appendLeadToSheet(
   source: Pick<Source, 'sheetsId' | 'sheetTab' | 'schemaType'>,
-  lead: Pick<
-    Lead,
-    | 'name' | 'email' | 'phone'
-    | 'paginaCaptura' | 'pesquisa' | 'grupo'
-    | 'utmCampaign' | 'utmMedium' | 'utmSource' | 'utmContent' | 'utmTerm'
-    | 'score' | 'grade'
-    | 'receivedAt'
-  >
+  lead: LeadFields
 ): Promise<void> {
   if (!source.sheetsId || !source.sheetTab) return;
 
   const date = new Date(lead.receivedAt);
-
-  // Ordem das colunas: A→M conforme planilha
-  // A: Data de Inscrição | B: Hora | C: Nome | D: Email | E: Telefone
-  // F: Página de Captura | G: Pesquisa | H: Grupo
-  // I: utm_campaign | J: utm_medium | K: utm_source | L: utm_content | M: utm_term
-  const row = [
-    formatDate(date),          // A - Data de Inscrição
-    formatTime(date),          // B - Hora
-    lead.name ?? '',           // C - Nome
-    lead.email ?? '',          // D - Email
-    lead.phone ?? '',          // E - Telefone
-    lead.paginaCaptura ?? '',  // F - Página de Captura
-    lead.pesquisa ?? '',       // G - Pesquisa
-    lead.grupo ?? '',          // H - Grupo
-    lead.utmCampaign ?? '',    // I - utm_campaign
-    lead.utmMedium ?? '',      // J - utm_medium
-    lead.utmSource ?? '',      // K - utm_source
-    lead.utmContent ?? '',     // L - utm_content
-    lead.utmTerm ?? '',        // M - utm_term
-    ...(source.schemaType === 'questionnaire'
-      ? [lead.score ?? '', lead.grade ?? '']  // N - Score | O - Grade
-      : []),
-  ];
+  const row =
+    source.schemaType === 'questionnaire'
+      ? buildQuestionnaireRow(lead, date)
+      : buildStandardRow(lead, date);
 
   const sheets = getSheetsClient();
   await sheets.spreadsheets.values.append({

@@ -17,6 +17,7 @@ export const StandardLeadSchema = z.object({
 export const QuestionnaireLeadSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
+  phone: z.string().optional(),
   answers: z.record(z.string(), z.unknown()),
   score: z.number().int().min(0),
   grade: z.enum(["A", "B", "C", "D"]),

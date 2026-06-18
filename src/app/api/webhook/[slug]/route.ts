@@ -55,6 +55,7 @@ export async function POST(
         schemaType: source.schemaType,
         name: data.name,
         email: data.email,
+        phone: (data as { phone?: string }).phone ?? null,
         score: (data as { score: number }).score,
         grade: (data as { grade: string }).grade,
         answers: (data as { answers: Record<string, unknown> }).answers as Prisma.InputJsonValue,

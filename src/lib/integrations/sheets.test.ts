@@ -39,12 +39,12 @@ describe('appendLeadToSheet', () => {
   });
 
   it('is a no-op when sheetsId is null', async () => {
-    await appendLeadToSheet({ sheetsId: null, sheetTab: null }, mockLead as any);
+    await appendLeadToSheet({ sheetsId: null, sheetTab: null, schemaType: 'standard' }, mockLead as any);
     expect(mockAppend).not.toHaveBeenCalled();
   });
 
   it('calls append with correct spreadsheetId and range', async () => {
-    await appendLeadToSheet({ sheetsId: 'sheet123', sheetTab: 'Leads' }, mockLead as any);
+    await appendLeadToSheet({ sheetsId: 'sheet123', sheetTab: 'Leads', schemaType: 'standard' }, mockLead as any);
     expect(mockAppend).toHaveBeenCalledWith(
       expect.objectContaining({
         spreadsheetId: 'sheet123',
