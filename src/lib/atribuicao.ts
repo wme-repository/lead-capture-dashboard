@@ -222,6 +222,27 @@ export type AttrSummary = {
   bestQualityOrigin: string | null;
 };
 
+export type LpStats = {
+  label: string;
+  raw: string;
+  count: number;
+  pct: number;
+  avgScore: number | null;
+  medianScore: number | null;
+  minScore: number | null;
+  maxScore: number | null;
+  grades: Record<string, number>;
+  qualifiedPct: number;
+  weakPct: number;
+  decisionIndex: number;
+  recommendation: "Escalar" | "Manter" | "Otimizar" | "Pausar";
+  topOrigin: string | null;
+  topCampaign: string | null;
+  lastLead: string | null;
+  daily: { day: string; count: number }[];
+  recentLeads: AttrLead[];
+};
+
 export type AttrData = {
   leads: AttrLead[];
   summary: AttrSummary;
@@ -246,6 +267,8 @@ export type AttrData = {
     sources: string[];
     platforms: string[];
   };
+  lps: LpStats[];
+  lpInsights: string[];
 };
 
 export type UtmCombo = {
@@ -476,6 +499,99 @@ export async function getAtribuicaoData(opts: {
     platforms: [...new Set(filtered.map((l) => l.platform))].sort(),
   };
 
+  // LP (Landing Page) stats
+  type LpAccum = {
+    raw: string;
+    leads: AttrLead[];
+    scores: number[];
+    grades: Map<string, number>;
+    origins: Map<string, number>;
+    camps: Map<string, number>;
+    last: string | null;
+    daily: Map<string, number>;
+  };
+  const lpMap = new Map<string, LpAccum>();
+  let lpIdx = 0;
+  const lpLabelMap = new Map<string, string>();
+  for (const l of filtered) {
+    const raw = (l.paginaCaptura ?? "").trim() || "(sem página)";
+    if (!lpLabelMap.has(raw)) {
+      lpIdx++;
+      lpLabelMap.set(raw, raw === "(sem página)" ? raw : `LP${String(lpIdx).padStart(2, "0")}`);
+    }
+    const e: LpAccum = lpMap.get(raw) ?? { raw, leads: [], scores: [], grades: new Map(), origins: new Map(), camps: new Map(), last: null, daily: new Map() };
+    e.leads.push(l);
+    if (l.score != null) e.scores.push(l.score);
+    if (l.grade) e.grades.set(l.grade, (e.grades.get(l.grade) ?? 0) + 1);
+    e.origins.set(l.origin, (e.origins.get(l.origin) ?? 0) + 1);
+    if (l.utmCampaign) e.camps.set(l.utmCampaign, (e.camps.get(l.utmCampaign) ?? 0) + 1);
+    if (!e.last || l.receivedAt > e.last) e.last = l.receivedAt;
+    const dk = brtDay(new Date(l.receivedAt));
+    e.daily.set(dk, (e.daily.get(dk) ?? 0) + 1);
+    lpMap.set(raw, e);
+  }
+
+  const maxLpCount = Math.max(1, ...[...lpMap.values()].map((e) => e.leads.length));
+
+  function median(arr: number[]): number | null {
+    if (arr.length === 0) return null;
+    const s = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+  }
+
+  const lps: LpStats[] = [...lpMap.entries()]
+    .map(([raw, e]) => {
+      const count = e.leads.length;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      const avgS = e.scores.length > 0 ? Math.round(e.scores.reduce((a, b) => a + b, 0) / e.scores.length) : null;
+      const qualA = (e.grades.get("A") ?? 0) + (e.grades.get("B") ?? 0);
+      const qualifiedPct = count > 0 ? Math.round((qualA / count) * 100) : 0;
+      const weakPct = count > 0 ? Math.round(((e.grades.get("D") ?? 0) / count) * 100) : 0;
+
+      const volNorm = (count / maxLpCount) * 100;
+      const scoreNorm = avgS != null ? avgS : 0;
+      const di = Math.round(volNorm * 0.35 + scoreNorm * 0.35 + qualifiedPct * 0.2 + Math.min(100, count >= 3 ? 60 : count * 20) * 0.1);
+      const rec: LpStats["recommendation"] = di >= 80 ? "Escalar" : di >= 60 ? "Manter" : di >= 40 ? "Otimizar" : "Pausar";
+
+      const dailyArr = dailyKeys.map((k) => ({ day: dayLabel(k), count: e.daily.get(k) ?? 0 }));
+
+      return {
+        label: lpLabelMap.get(raw) ?? raw,
+        raw,
+        count,
+        pct,
+        avgScore: avgS,
+        medianScore: median(e.scores),
+        minScore: e.scores.length > 0 ? Math.min(...e.scores) : null,
+        maxScore: e.scores.length > 0 ? Math.max(...e.scores) : null,
+        grades: Object.fromEntries(e.grades),
+        qualifiedPct,
+        weakPct,
+        decisionIndex: di,
+        recommendation: rec,
+        topOrigin: topKey(e.origins),
+        topCampaign: topKey(e.camps),
+        lastLead: e.last,
+        daily: dailyArr,
+        recentLeads: e.leads.slice(0, 10),
+      };
+    })
+    .sort((a, b) => b.decisionIndex - a.decisionIndex);
+
+  // LP insights
+  const lpInsights: string[] = [];
+  if (lps.length > 0) {
+    const best = lps[0];
+    lpInsights.push(`${best.label} (${best.raw}) lidera com índice de decisão ${best.decisionIndex}/100.`);
+    const escalar = lps.filter((l) => l.recommendation === "Escalar");
+    if (escalar.length > 0) lpInsights.push(`${escalar.length} LP${escalar.length > 1 ? "s" : ""} recomendada${escalar.length > 1 ? "s" : ""} para escalar.`);
+    const pausar = lps.filter((l) => l.recommendation === "Pausar");
+    if (pausar.length > 0) lpInsights.push(`${pausar.length} LP${pausar.length > 1 ? "s" : ""} recomendada${pausar.length > 1 ? "s" : ""} para pausar.`);
+    const semPag = lps.find((l) => l.raw === "(sem página)");
+    if (semPag && semPag.count > 0) lpInsights.push(`${semPag.count} lead${semPag.count > 1 ? "s" : ""} sem página de captura identificada.`);
+  }
+
   return {
     leads: filtered,
     summary,
@@ -488,6 +604,8 @@ export async function getAtribuicaoData(opts: {
     insights,
     utmAlerts,
     filterOptions,
+    lps,
+    lpInsights,
   };
 }
 
