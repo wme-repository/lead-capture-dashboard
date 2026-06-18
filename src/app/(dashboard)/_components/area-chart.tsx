@@ -26,8 +26,8 @@ export default function AreaChart({ data }: { data: Point[] }) {
   const tickEvery = Math.ceil(n / 7);
 
   return (
-    <div className="relative overflow-hidden">
-      <svg viewBox={`0 0 ${w} ${h}`} width="100%" className="block">
+    <div className="relative overflow-hidden" style={{ maxHeight: "220px" }}>
+      <svg viewBox={`0 0 ${w} ${h}`} className="block h-auto w-full" preserveAspectRatio="xMidYMid meet">
         {gridYs.map((y, i) => (
           <line
             key={i}
