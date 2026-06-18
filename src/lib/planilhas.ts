@@ -38,6 +38,7 @@ export type SheetMeta = {
   lastUpdate: string | null;
   origin: string;
   status: "synced" | "updating" | "error" | "empty";
+  sheetsUrl: string | null;
 };
 
 export type PlanilhasData = {
@@ -46,7 +47,7 @@ export type PlanilhasData = {
 };
 
 export async function getPlanilhasData(): Promise<PlanilhasData> {
-  const [captLeads, questLeads, lastSync] = await Promise.all([
+  const [captLeads, questLeads, lastSync, sources] = await Promise.all([
     prisma.lead.findMany({
       orderBy: { receivedAt: "desc" },
       take: 5000,
@@ -83,7 +84,13 @@ export async function getPlanilhasData(): Promise<PlanilhasData> {
       },
     }),
     prisma.syncLog.findFirst({ orderBy: { attemptedAt: "desc" }, select: { attemptedAt: true } }),
+    prisma.source.findMany({ select: { sheetsId: true, schemaType: true } }),
   ]);
+
+  const captSource = sources.find((s) => s.schemaType === "standard");
+  const questSource = sources.find((s) => s.schemaType === "questionnaire");
+  const toSheetsUrl = (id: string | null) =>
+    id ? `https://docs.google.com/spreadsheets/d/${id}` : null;
 
   const captacaoRows: CaptacaoRow[] = captLeads.map((l) => {
     const brt = toBRT(l.receivedAt);
@@ -138,6 +145,7 @@ export async function getPlanilhasData(): Promise<PlanilhasData> {
         lastUpdate: lastUpdateIso,
         origin: "Google Sheets — Captação",
         status: captacaoRows.length > 0 ? "synced" : "empty",
+        sheetsUrl: toSheetsUrl(captSource?.sheetsId ?? null),
       },
     },
     questionario: {
@@ -148,6 +156,7 @@ export async function getPlanilhasData(): Promise<PlanilhasData> {
         lastUpdate: lastUpdateIso,
         origin: "Google Sheets — Questionário",
         status: questionarioRows.length > 0 ? "synced" : "empty",
+        sheetsUrl: toSheetsUrl(questSource?.sheetsId ?? null),
       },
     },
   };

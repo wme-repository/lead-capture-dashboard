@@ -362,7 +362,7 @@ export default function PlanilhasShell({
           <HeaderBtn
             icon={<ExternalLink size={13} />}
             label="Abrir planilha"
-            onClick={() => window.open("https://docs.google.com/spreadsheets", "_blank")}
+            onClick={() => meta.sheetsUrl && window.open(meta.sheetsUrl, "_blank")}
           />
           <HeaderBtn
             icon={fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
@@ -450,7 +450,7 @@ export default function PlanilhasShell({
           <ToolbarBtn icon={<RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />} label="Atualizar" onClick={handleRefresh} />
           <ToolbarBtn icon={<Download size={14} />} label="CSV" onClick={handleExportCsv} />
           <ToolbarBtn icon={<Copy size={14} />} label="Copiar" onClick={handleCopyVisible} />
-          <ToolbarBtn icon={<ExternalLink size={14} />} label="Abrir" onClick={() => window.open("https://docs.google.com/spreadsheets", "_blank")} />
+          <ToolbarBtn icon={<ExternalLink size={14} />} label="Abrir" onClick={() => meta.sheetsUrl && window.open(meta.sheetsUrl, "_blank")} />
         </div>
 
         {hasActiveFilters && (
