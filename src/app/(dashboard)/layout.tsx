@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Sidebar from "./_components/sidebar";
+import ThemeToggle from "./_components/theme-toggle";
 
 export default async function DashboardLayout({
   children,
@@ -20,7 +21,10 @@ export default async function DashboardLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-gray-200 bg-white px-5 py-3 md:hidden">
           <span className="font-semibold text-gray-800">Leads Dashboard</span>
-          <span className="text-xs text-gray-500">{session.user.email}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">{session.user.email}</span>
+            <ThemeToggle compact />
+          </div>
         </header>
         <main className="min-w-0 flex-1 p-5 md:p-7">{children}</main>
       </div>

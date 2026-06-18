@@ -12,6 +12,7 @@ import {
   Settings,
   Zap,
 } from "lucide-react";
+import ThemeToggle from "./theme-toggle";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -60,15 +61,18 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className="mt-auto flex items-center gap-2.5 border-t border-gray-100 px-2 pt-3">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-50 text-xs font-medium text-blue-700">
-          {initials}
-        </div>
-        <div className="leading-tight">
-          <div className="text-xs font-medium text-gray-800">
-            {user.role === "admin" ? "Admin" : "Usuário"}
+      <div className="mt-auto space-y-1 border-t border-gray-100 pt-2">
+        <ThemeToggle />
+        <div className="flex items-center gap-2.5 px-2 pt-1">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-50 text-xs font-medium text-blue-700">
+            {initials}
           </div>
-          <div className="max-w-[120px] truncate text-[11px] text-gray-400">{user.email}</div>
+          <div className="leading-tight">
+            <div className="text-xs font-medium text-gray-800">
+              {user.role === "admin" ? "Admin" : "Usuário"}
+            </div>
+            <div className="max-w-[120px] truncate text-[11px] text-gray-400">{user.email}</div>
+          </div>
         </div>
       </div>
     </aside>

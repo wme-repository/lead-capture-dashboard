@@ -35,7 +35,7 @@ export default function AreaChart({ data }: { data: Point[] }) {
             x2={w - padX}
             y1={y}
             y2={y}
-            stroke="#e5e7eb"
+            stroke="var(--color-gray-200)"
             strokeWidth={1}
             strokeDasharray="3 4"
           />
@@ -80,7 +80,7 @@ export default function AreaChart({ data }: { data: Point[] }) {
               onMouseLeave={() => setHover(null)}
             />
             {i % tickEvery === 0 && (
-              <text x={x} y={h - 6} fontSize={10} fill="#9ca3af" textAnchor="middle">
+              <text x={x} y={h - 6} fontSize={10} fill="var(--color-gray-400)" textAnchor="middle">
                 {data[i].label}
               </text>
             )}
