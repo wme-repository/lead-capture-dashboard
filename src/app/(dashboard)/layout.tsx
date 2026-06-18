@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -20,7 +21,10 @@ export default async function DashboardLayout({
       <Sidebar user={{ email: session.user.email, role: session.user.role }} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-gray-200 bg-white px-5 py-3 md:hidden">
-          <span className="font-semibold text-gray-800">Leads Dashboard</span>
+          <div className="flex items-center gap-2">
+            <Image src="/logo-esq.png" alt="Esquadrão de Elite" width={24} height={24} className="rounded" />
+            <span className="font-semibold text-gray-800">Leads Dashboard</span>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500">{session.user.email}</span>
             <ThemeToggle compact />
