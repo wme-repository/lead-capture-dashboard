@@ -12,6 +12,7 @@ import {
   Puzzle,
   Settings,
   Table2,
+  GitFork,
 } from "lucide-react";
 import ThemeToggle from "./theme-toggle";
 
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/fontes", label: "Fontes", icon: Plug },
   { href: "/ab-tests", label: "A/B Tests", icon: FlaskConical },
   { href: "/integracoes", label: "Integrações", icon: Puzzle },
+  { href: "/atribuicao", label: "Atribuição", icon: GitFork },
   { href: "/planilhas", label: "Planilhas", icon: Table2 },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
