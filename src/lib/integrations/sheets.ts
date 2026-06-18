@@ -34,6 +34,7 @@ function buildStandardRow(lead: LeadFields, date: Date): unknown[] {
     formatDate(date),
     formatTime(date),
     lead.name ?? '',
+    lead.email ?? '',
     lead.phone ?? '',
     lead.paginaCaptura ?? '',
     lead.pesquisa ?? '',
