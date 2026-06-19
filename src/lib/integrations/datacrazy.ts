@@ -4,7 +4,7 @@ type LeadFields = Pick<Lead, 'name' | 'email' | 'phone' | 'utmSource' | 'utmMedi
 
 function normalizePhone(raw: string | null): string {
   if (!raw) return '';
-  return raw.replace(/[^\d+]/g, '');
+  return raw.trim();
 }
 
 function buildPayload(
