@@ -1,23 +1,57 @@
 "use client";
 
+import { useState } from "react";
 import type { SourceWithStats } from "@/lib/fontes";
-import { Plug, ChevronRight, Sheet, Webhook } from "lucide-react";
+import { Plug, ChevronRight, Copy, Check, Eye, Settings } from "lucide-react";
 
-const DEST_ICONS: Record<string, { label: string; color: string }> = {
-  sheets: { label: "Sheets", color: "bg-green-100 text-green-700" },
-  datacrazy: { label: "DataCrazy", color: "bg-purple-100 text-purple-700" },
+const BG = "#0d1117";
+const CARD = "#161b22";
+const BORDER = "#30363d";
+const BORDER2 = "#21262d";
+const TEXT = "#c9d1d9";
+const MUTED = "#8b949e";
+const ACCENT = "#58a6ff";
+const GREEN = "#3fb950";
+
+const SOURCE_DESCRIPTIONS: Record<string, string> = {
+  quest: "Respostas do formulário de perguntas das landing pages",
+  lead: "Leads captados pelas landing pages com parâmetros UTM",
 };
 
-function StatusBadge({ count }: { count: number }) {
+const DEST_META: Record<string, { label: string; color: string; bg: string }> = {
+  sheets: { label: "Sheets", color: "#3fb950", bg: "rgba(63,185,80,0.12)" },
+  datacrazy: { label: "DataCrazy", color: "#a371f7", bg: "rgba(163,113,247,0.12)" },
+};
+
+function StatusBadge({ active }: { active: boolean }) {
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-        count > 0
-          ? "bg-green-50 text-green-700"
-          : "bg-gray-100 text-gray-500"
-      }`}
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
+      style={{
+        background: active ? "rgba(63,185,80,0.12)" : "rgba(139,148,158,0.12)",
+        color: active ? GREEN : MUTED,
+      }}
     >
-      {count > 0 ? "ativa" : "sem leads"}
+      <span
+        className="inline-block h-1.5 w-1.5 rounded-full"
+        style={{ background: active ? GREEN : MUTED }}
+      />
+      {active ? "ativa" : "sem leads"}
+    </span>
+  );
+}
+
+function TypeBadge({ type }: { type: string }) {
+  const isQuest = type === "questionnaire";
+  return (
+    <span
+      className="rounded-md px-2 py-0.5 text-[11px] font-medium"
+      style={{
+        background: isQuest ? "rgba(88,166,255,0.12)" : "rgba(139,148,158,0.1)",
+        color: isQuest ? ACCENT : MUTED,
+      }}
+    >
+      {isQuest ? "Questionário" : "Padrão"}
     </span>
   );
 }
@@ -40,15 +74,27 @@ type Props = {
   onManage: (s: SourceWithStats) => void;
 };
 
-export default function FontesTab({ sources, onManage }: Props) {
+export default function FontesTab({ sources, appUrl, onManage }: Props) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyWebhook = async (s: SourceWithStats) => {
+    const url = `${appUrl}/api/webhook/${s.slug}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(s.id);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
+
   if (sources.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
-        <Plug size={28} className="text-gray-300" />
-        <p className="text-sm font-medium text-gray-600">
+      <div
+        className="flex flex-col items-center gap-3 rounded-xl px-6 py-16 text-center"
+        style={{ background: CARD, border: `1px solid ${BORDER}` }}
+      >
+        <Plug size={32} style={{ color: MUTED, opacity: 0.5 }} />
+        <p className="text-sm font-medium" style={{ color: TEXT }}>
           Nenhuma fonte cadastrada
         </p>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs" style={{ color: MUTED }}>
           Clique em &ldquo;+ Nova Fonte&rdquo; para criar a primeira.
         </p>
       </div>
@@ -56,69 +102,79 @@ export default function FontesTab({ sources, onManage }: Props) {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
       {/* Desktop table */}
       <div className="hidden md:block">
         <table className="w-full text-left text-xs">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/60">
-              <th className="px-4 py-2.5 font-medium text-gray-500">Status</th>
-              <th className="px-4 py-2.5 font-medium text-gray-500">Nome</th>
-              <th className="px-4 py-2.5 font-medium text-gray-500">Slug</th>
-              <th className="px-4 py-2.5 font-medium text-gray-500">Tipo</th>
-              <th className="px-4 py-2.5 font-medium text-gray-500 text-right">
-                Leads
-              </th>
-              <th className="px-4 py-2.5 font-medium text-gray-500">
-                Último lead
-              </th>
-              <th className="px-4 py-2.5 font-medium text-gray-500">
-                Destinos
-              </th>
-              <th className="px-4 py-2.5" />
+            <tr style={{ borderBottom: `1px solid ${BORDER2}` }}>
+              {["Status", "Nome", "Slug", "Tipo", "Leads", "Último lead", "Destinos", "Ações"].map((h, i) => (
+                <th
+                  key={h}
+                  className={`px-4 py-3 text-[11px] font-semibold uppercase tracking-wider ${i === 4 ? "text-right" : ""}`}
+                  style={{ color: MUTED }}
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody>
             {sources.map((s) => (
               <tr
                 key={s.id}
-                className="group transition-colors hover:bg-gray-50/50"
+                className="group transition-colors"
+                style={{ borderBottom: `1px solid ${BORDER2}` }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                <td className="px-4 py-3">
-                  <StatusBadge count={s.leadCount} />
+                <td className="px-4 py-4">
+                  <StatusBadge active={s.leadCount > 0} />
                 </td>
-                <td className="px-4 py-3 font-medium text-gray-900">
-                  {s.name}
+                <td className="px-4 py-4">
+                  <div>
+                    <div className="font-medium" style={{ color: TEXT }}>{s.name}</div>
+                    <div className="mt-0.5 text-[11px]" style={{ color: MUTED }}>
+                      {SOURCE_DESCRIPTIONS[s.slug] ?? "Fonte de captação de leads"}
+                    </div>
+                  </div>
                 </td>
-                <td className="px-4 py-3">
-                  <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-600">
+                <td className="px-4 py-4">
+                  <code
+                    className="rounded px-2 py-1 font-mono text-[11px]"
+                    style={{ background: "rgba(139,148,158,0.1)", color: MUTED }}
+                  >
                     /{s.slug}
                   </code>
                 </td>
-                <td className="px-4 py-3">
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
-                    {s.schemaType === "questionnaire" ? "questionário" : "padrão"}
+                <td className="px-4 py-4">
+                  <TypeBadge type={s.schemaType} />
+                </td>
+                <td className="px-4 py-4 text-right">
+                  <span className="text-sm font-bold tabular-nums" style={{ color: TEXT }}>
+                    {s.leadCount.toLocaleString("pt-BR")}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right font-semibold tabular-nums text-gray-900">
-                  {s.leadCount.toLocaleString("pt-BR")}
+                <td className="px-4 py-4">
+                  <span className="text-[11px]" style={{ color: MUTED }}>
+                    {timeAgo(s.lastLeadAt)}
+                  </span>
                 </td>
-                <td className="px-4 py-3 text-gray-500">
-                  {timeAgo(s.lastLeadAt)}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-1">
+                <td className="px-4 py-4">
+                  <div className="flex gap-1.5">
                     {s.destinations.length === 0 ? (
-                      <span className="text-gray-400">—</span>
+                      <span style={{ color: MUTED }}>—</span>
                     ) : (
                       s.destinations.map((d) => {
-                        const meta = DEST_ICONS[d];
+                        const meta = DEST_META[d];
                         return (
                           <span
                             key={d}
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                              meta?.color ?? "bg-gray-100 text-gray-600"
-                            }`}
+                            className="rounded-md px-2 py-0.5 text-[11px] font-medium"
+                            style={{
+                              background: meta?.bg ?? "rgba(139,148,158,0.1)",
+                              color: meta?.color ?? MUTED,
+                            }}
                           >
                             {meta?.label ?? d}
                           </span>
@@ -127,13 +183,38 @@ export default function FontesTab({ sources, onManage }: Props) {
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => onManage(s)}
-                    className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-blue-600 opacity-0 transition-opacity hover:bg-blue-50 group-hover:opacity-100"
-                  >
-                    Gerenciar <ChevronRight size={12} />
-                  </button>
+                <td className="px-4 py-4">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onManage(s)}
+                      className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors"
+                      style={{ color: ACCENT }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(88,166,255,0.1)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <Settings size={12} /> Gerenciar
+                    </button>
+                    <button
+                      onClick={() => onManage(s)}
+                      className="rounded-md p-1.5 transition-colors"
+                      style={{ color: MUTED }}
+                      title="Ver detalhes"
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(139,148,158,0.1)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <Eye size={13} />
+                    </button>
+                    <button
+                      onClick={() => copyWebhook(s)}
+                      className="rounded-md p-1.5 transition-colors"
+                      style={{ color: copiedId === s.id ? GREEN : MUTED }}
+                      title="Copiar webhook"
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(139,148,158,0.1)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      {copiedId === s.id ? <Check size={13} /> : <Copy size={13} />}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -142,23 +223,28 @@ export default function FontesTab({ sources, onManage }: Props) {
       </div>
 
       {/* Mobile cards */}
-      <div className="divide-y divide-gray-100 md:hidden">
+      <div className="divide-y md:hidden" style={{ borderColor: BORDER2 }}>
         {sources.map((s) => (
           <button
             key={s.id}
             onClick={() => onManage(s)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-50"
+            className="flex w-full items-center justify-between px-4 py-4 text-left transition-colors"
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-900">{s.name}</span>
-                <StatusBadge count={s.leadCount} />
+                <span className="font-medium" style={{ color: TEXT }}>{s.name}</span>
+                <StatusBadge active={s.leadCount > 0} />
               </div>
-              <div className="mt-0.5 text-[11px] text-gray-500">
+              <div className="mt-1 text-[11px]" style={{ color: MUTED }}>
+                {SOURCE_DESCRIPTIONS[s.slug] ?? "Fonte de captação de leads"}
+              </div>
+              <div className="mt-1 text-[11px]" style={{ color: MUTED }}>
                 /{s.slug} · {s.leadCount} leads · {timeAgo(s.lastLeadAt)}
               </div>
             </div>
-            <ChevronRight size={16} className="shrink-0 text-gray-400" />
+            <ChevronRight size={16} style={{ color: MUTED }} className="shrink-0" />
           </button>
         ))}
       </div>
