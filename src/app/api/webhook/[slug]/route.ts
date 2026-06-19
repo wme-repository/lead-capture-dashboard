@@ -25,6 +25,13 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Log incoming request origin
+  const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
+  const ua = request.headers.get("user-agent") ?? "unknown";
+  const referer = request.headers.get("referer") ?? "none";
+  const origin = request.headers.get("origin") ?? "none";
+  console.log(`[webhook] slug=${slug} ip=${ip} ua=${ua} origin=${origin} referer=${referer}`);
+
   // 3. Parse body
   const body = await request.json().catch(() => null);
   if (!body) {
