@@ -82,12 +82,13 @@ export async function POST(
   const lead = await prisma.$transaction(async (tx) => {
     const newLead = await tx.lead.create({ data: leadData });
 
-    await tx.syncLog.createMany({
-      data: [
-        { leadId: newLead.id, destination: "sheets", status: "pending" },
-        { leadId: newLead.id, destination: "datacrazy", status: "pending" },
-      ],
-    });
+    const syncRows = [
+      { leadId: newLead.id, destination: "sheets", status: "pending" },
+    ];
+    if (source.schemaType === "standard") {
+      syncRows.push({ leadId: newLead.id, destination: "datacrazy", status: "pending" });
+    }
+    await tx.syncLog.createMany({ data: syncRows });
 
     return newLead;
   });
