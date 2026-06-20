@@ -49,30 +49,17 @@ function buildStandardRow(lead: LeadFields, date: Date): unknown[] {
   ];
 }
 
-// Leadscore sheet columns F→P — fixed order matching spreadsheet headers
-const QUESTIONNAIRE_KEYS = [
-  'nivel_concursos',
-  'estudou_tribunal',
-  'conhece_thallius',
-  'motivo_projeto',
-  'idade',
-  'renda',
-  'genero',
-  'escolaridade',
-  'situacao',
-  'tempo_esquadrao',
-  'expectativas',
-];
-
+// Leadscore sheet columns F→P — answers keyed "1" through "11"
 function buildQuestionnaireRow(lead: LeadFields, date: Date): unknown[] {
   const answers = (lead.answers as Record<string, unknown>) ?? {};
+  const answerCells = Array.from({ length: 11 }, (_, i) => answers[String(i + 1)] ?? '');
   return [
     formatTime(date),
     formatDate(date),
     lead.name ?? '',
     lead.email ?? '',
     lead.phone ?? '',
-    ...QUESTIONNAIRE_KEYS.map((k) => answers[k] ?? ''),
+    ...answerCells,
     lead.score ?? '',
     lead.grade ?? '',
   ];
