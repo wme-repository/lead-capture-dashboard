@@ -33,11 +33,32 @@ export async function POST(
   const origin = request.headers.get("origin") ?? "none";
   console.log(`[webhook] slug=${slug} ip=${ip} ua=${ua} origin=${origin} referer=${referer}`);
 
-  // 3. Parse body
-  const body = await request.json().catch(() => null);
-  if (!body) {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  // 3. Parse body — accept JSON, form-encoded, or multipart
+  const contentType = request.headers.get("content-type") ?? "";
+  let body: Record<string, unknown> | null = null;
+  try {
+    if (contentType.includes("application/json")) {
+      body = await request.json();
+    } else if (
+      contentType.includes("application/x-www-form-urlencoded") ||
+      contentType.includes("multipart/form-data")
+    ) {
+      const form = await request.formData();
+      body = {};
+      for (const [key, value] of form.entries()) {
+        body[key] = typeof value === "string" ? value : value.name;
+      }
+    } else {
+      // Fallback: try JSON
+      body = await request.json();
+    }
+  } catch {
+    body = null;
   }
+  if (!body) {
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  }
+  console.log(`[webhook] body keys: ${Object.keys(body).join(",")}`);
 
   // 4. Validate against schema for this source
   const schema =
