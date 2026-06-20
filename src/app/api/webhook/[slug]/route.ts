@@ -59,6 +59,9 @@ export async function POST(
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
   console.log(`[webhook] body keys: ${Object.keys(body).join(",")}`);
+  if (slug === "lead") {
+    console.log(`[webhook] FULL BODY: ${JSON.stringify(body)}`);
+  }
 
   // 4. Validate against schema for this source
   const schema =
