@@ -4,7 +4,7 @@
 
 **Core value**: Receive leads from multiple sites, guarantee none are lost, and provide immediate visibility on volume and origin.
 **Stack**: Next.js (App Router) + PostgreSQL/Supabase (Prisma) + Google Sheets (Service Account) + DataCrazy (webhook POST)
-**Deploy target**: VPS 69.62.89.206, Easypanel + Traefik, `leads.esqtools.com`
+**Deploy target**: VPS 178.104.14.40, Easypanel + Traefik, `leads.esqtools.com`
 
 ## Current Position
 
@@ -66,7 +66,7 @@ Progress: [#####-----] 40% — 2/5 phases complete
 - Traefik: `leads-custom.yaml` at `/etc/easypanel/traefik/config/` routes `leads.esqtools.com` → `app_leads_01leads:80`
 - Database: Supabase PostgreSQL, tables created via raw SQL (migration tooling doesn't work with Transaction pooler)
 - Admin seed: `admin@esqtools.com` / `ChangeMe123!` (must change on first login)
-- VPS access: root@69.62.89.206, SSH key not configured — use password
+- VPS access: root@178.104.14.40, SSH key not configured — use password
 
 ### Blockers
 

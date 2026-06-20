@@ -1,0 +1,158 @@
+{
+  "name": "Exportar Leads TRT → Google Sheets",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-001",
+      "name": "Início Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://n8n-hz-hml.esqtools.com/api/v1/executions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "COLE_SEU_TOKEN_AQUI"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "workflowId",
+              "value": "dxpSja1hYCK4nPdz"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "includeData",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "paginationMode": "updateAQueryParameter",
+            "parameters": {
+              "parameters": [
+                {
+                  "type": "query",
+                  "name": "cursor",
+                  "value": "={{ $response.body.nextCursor }}"
+                }
+              ]
+            },
+            "paginationCompleteWhen": "other",
+            "completeExpression": "={{ !$response.body.hasMore }}"
+          }
+        }
+      },
+      "id": "node-002",
+      "name": "Buscar Todas as Execuções",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allLeads = [];\n\n// Nomes possíveis do nó webhook neste workflow\nconst webhookNodeNames = ['Webhook - Projeto TRT2', 'Webhook - Projeto TRT'];\n\nfor (const page of $input.all()) {\n  const executions = page.json.data || [];\n\n  for (const exec of executions) {\n    try {\n      const runData = exec.data?.resultData?.runData || {};\n\n      // Encontra o nó webhook disponível\n      let webhookData = null;\n      for (const nodeName of webhookNodeNames) {\n        if (runData[nodeName]) {\n          webhookData = runData[nodeName];\n          break;\n        }\n      }\n      if (!webhookData) continue;\n\n      const rawJson = webhookData[0]?.data?.main?.[0]?.[0]?.json;\n      if (!rawJson) continue;\n\n      const body = typeof rawJson.body === 'string' ? JSON.parse(rawJson.body) : (rawJson.body || {});\n      const lead = body.lead || {};\n      const utms = body.utms || {};\n      const meta = body.meta || {};\n\n      const timestamp = meta.timestamp ? new Date(meta.timestamp) : new Date(exec.startedAt);\n      const dataInscricao = timestamp.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });\n      const horaInscricao = timestamp.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false });\n\n      allLeads.push({\n        json: {\n          'Data de Inscrição': dataInscricao,\n          'Hora': horaInscricao,\n          'Email': lead.email || '',\n          'Nome': lead.name || '',\n          'Telefone': lead.phone || '',\n          'Página de Captura': meta.page_url || '',\n          'Pesquisa': meta.referrer || '',\n          'Grupo': '',\n          'utm_campaign': utms.utm_campaign || '',\n          'utm_medium': utms.utm_medium || '',\n          'utm_source': utms.utm_source || '',\n          'utm_content': utms.utm_content || '',\n          'utm_term': utms.utm_term || ''\n        }\n      });\n    } catch (e) {\n      // execução sem dados válidos, ignorar\n    }\n  }\n}\n\nif (allLeads.length === 0) {\n  return [{ json: { info: 'Nenhum lead encontrado nas execuções' } }];\n}\n\nreturn allLeads;"
+      },
+      "id": "node-003",
+      "name": "Extrair Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1NpQ9w0QU_bGDk14kxbpqGT8XnouicGELt6vOJk0dCvE/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Histórico TRT",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data de Inscrição": "={{ $json[\"Data de Inscrição\"] }}",
+            "Hora": "={{ $json[\"Hora\"] }}",
+            "Nome": "={{ $json[\"Nome\"] }}",
+            "Email": "={{ $json[\"Email\"] }}",
+            "Telefone": "={{ $json[\"Telefone\"] }}",
+            "Página de Captura": "={{ $json[\"Página de Captura\"] }}",
+            "Pesquisa": "={{ $json[\"Pesquisa\"] }}",
+            "Grupo": "={{ $json[\"Grupo\"] }}",
+            "utm_campaign": "={{ $json[\"utm_campaign\"] }}",
+            "utm_medium": "={{ $json[\"utm_medium\"] }}",
+            "utm_source": "={{ $json[\"utm_source\"] }}",
+            "utm_content": "={{ $json[\"utm_content\"] }}",
+            "utm_term": "={{ $json[\"utm_term\"] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Data de Inscrição", "displayName": "Data de Inscrição", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Hora", "displayName": "Hora", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Nome", "displayName": "Nome", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Email", "displayName": "Email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Telefone", "displayName": "Telefone", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Página de Captura", "displayName": "Página de Captura", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Pesquisa", "displayName": "Pesquisa", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Grupo", "displayName": "Grupo", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "utm_campaign", "displayName": "utm_campaign", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "utm_medium", "displayName": "utm_medium", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "utm_source", "displayName": "utm_source", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "utm_content", "displayName": "utm_content", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "utm_term", "displayName": "utm_term", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "node-004",
+      "name": "Google Sheets - Histórico",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [940, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "v6AAstdO0hhE1x7B",
+          "name": "Google Sheets account - Curso_Esquadrao"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Início Manual": {
+      "main": [
+        [{ "node": "Buscar Todas as Execuções", "type": "main", "index": 0 }]
+      ]
+    },
+    "Buscar Todas as Execuções": {
+      "main": [
+        [{ "node": "Extrair Leads", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extrair Leads": {
+      "main": [
+        [{ "node": "Google Sheets - Histórico", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

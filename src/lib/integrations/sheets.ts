@@ -23,6 +23,7 @@ type LeadFields = Pick<
   | 'name' | 'email' | 'phone'
   | 'paginaCaptura' | 'pesquisa' | 'grupo'
   | 'utmCampaign' | 'utmMedium' | 'utmSource' | 'utmContent' | 'utmTerm'
+  | 'lp'
   | 'score' | 'grade' | 'answers'
   | 'receivedAt'
 >;
@@ -44,6 +45,7 @@ function buildStandardRow(lead: LeadFields, date: Date): unknown[] {
     lead.utmSource ?? '',
     lead.utmContent ?? '',
     lead.utmTerm ?? '',
+    lead.lp ?? '',
   ];
 }
 

@@ -12,6 +12,7 @@ export const StandardLeadSchema = z.object({
   utm_campaign: z.string().optional(),
   utm_term: z.string().optional(),
   utm_content: z.string().optional(),
+  lp: z.string().optional(),
 });
 
 export const QuestionnaireLeadSchema = z.object({

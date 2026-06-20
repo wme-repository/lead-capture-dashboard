@@ -1,0 +1,128 @@
+{
+  "name": "Rerun Últimas 40 Execuções - Fluxo Captação",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {}
+    },
+    {
+      "id": "buscarExecucoes",
+      "name": "Buscar Execuções",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://n8n-hz-hml.esqtools.com/api/v1/executions",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "X-N8N-API-KEY", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZDg3ZGFjNy1mOTg0LTQwZWItYjAwYy1lZjIzMmZmZWRmMzAiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiNDhlOThmZWEtZWE5Zi00MDczLWE2NDAtNGI5YzAyZDc2NWE0IiwiaWF0IjoxNzc5NjY0MDI1fQ.FBvkzLHYNzfPNmD9d775rMvDJZcYL2GzrdmOfVMzIKk"}]},
+        "sendQuery": true,
+        "queryParameters": {"parameters": [{"name": "workflowId", "value": "MRHndDyZLGWrlqCh"}, {"name": "limit", "value": "40"}]},
+        "options": {}
+      }
+    },
+    {
+      "id": "separarArray",
+      "name": "Separar Array",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [640, 300],
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      }
+    },
+    {
+      "id": "buscarDetalhes",
+      "name": "Buscar Detalhes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://n8n-hz-hml.esqtools.com/api/v1/executions/' + $json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "X-N8N-API-KEY", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZDg3ZGFjNy1mOTg0LTQwZWItYjAwYy1lZjIzMmZmZWRmMzAiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiNDhlOThmZWEtZWE5Zi00MDczLWE2NDAtNGI5YzAyZDc2NWE0IiwiaWF0IjoxNzc5NjY0MDI1fQ.FBvkzLHYNzfPNmD9d775rMvDJZcYL2GzrdmOfVMzIKk"}]},
+        "sendQuery": true,
+        "queryParameters": {"parameters": [{"name": "includeData", "value": "true"}]},
+        "options": {}
+      }
+    },
+    {
+      "id": "extrairDados",
+      "name": "Extrair Dados Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const runData = $json.data?.resultData?.runData;\nconst executionId = $json.id;\n\nif (!runData || !runData['Code in JavaScript']) {\n  return { json: { executionId, error: 'sem dados do lead' } };\n}\n\nconst codeNode = runData['Code in JavaScript'];\nconst leadData = codeNode?.[0]?.data?.main?.[0]?.[0]?.json;\n\nif (!leadData) {\n  return { json: { executionId, error: 'lead nao encontrado' } };\n}\n\nreturn { json: { ...leadData, executionId } };"
+      }
+    },
+    {
+      "id": "21e92ec5-c723-4455-857d-c8381316012a",
+      "name": "Planilha de dados",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1240, 300],
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true, "value": "1NpQ9w0QU_bGDk14kxbpqGT8XnouicGELt6vOJk0dCvE", "mode": "list", "cachedResultName": "01 - Captação de Leads - Projeto TRT -  04 a 09/05 -", "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NpQ9w0QU_bGDk14kxbpqGT8XnouicGELt6vOJk0dCvE/edit?usp=drivesdk"},
+        "sheetName": {"__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Página1", "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NpQ9w0QU_bGDk14kxbpqGT8XnouicGELt6vOJk0dCvE/edit#gid=0"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data de Inscrição": "={{ $json['Data de Inscrição'] }}",
+            "Hora": "={{ $json['Hora'] }}",
+            "Email": "={{ $json['Email'] }}",
+            "Nome": "={{ $json['Nome'] }}",
+            "Telefone": "={{ $json['Telefone'] }}",
+            "Página de Captura": "={{ $json['Página de Captura'] }}",
+            "Pesquisa": "={{ $json['Pesquisa'] }}",
+            "Grupo": "={{ $json['Grupo'] }}",
+            "utm_campaign": "={{ $json['utm_campaign'] }}",
+            "utm_medium": "={{ $json['utm_medium'] }}",
+            "utm_source": "={{ $json['utm_source'] }}",
+            "utm_content": "={{ $json['utm_content'] }}",
+            "utm_term": "={{ $json['utm_term'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {"id": "Data de Inscrição","displayName": "Data de Inscrição","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "Hora","displayName": "Hora","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "Nome","displayName": "Nome","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "Email","displayName": "Email","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "Telefone","displayName": "Telefone","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "Página de Captura","displayName": "Página de Captura","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "Pesquisa","displayName": "Pesquisa","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "Grupo","displayName": "Grupo","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "utm_campaign","displayName": "utm_campaign","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "utm_medium","displayName": "utm_medium","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "utm_source","displayName": "utm_source","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "utm_content","displayName": "utm_content","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "utm_term","displayName": "utm_term","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": true}
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "credentials": {"googleSheetsOAuth2Api": {"id": "v6AAstdO0hhE1x7B", "name": "Google Sheets account - Curso_Esquadrao"}},
+      "retryOnFail": true,
+      "waitBetweenTries": 3600,
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {"main": [[{"node": "Buscar Execuções", "type": "main", "index": 0}]]},
+    "Buscar Execuções": {"main": [[{"node": "Separar Array", "type": "main", "index": 0}]]},
+    "Separar Array": {"main": [[{"node": "Buscar Detalhes", "type": "main", "index": 0}]]},
+    "Buscar Detalhes": {"main": [[{"node": "Extrair Dados Lead", "type": "main", "index": 0}]]},
+    "Extrair Dados Lead": {"main": [[{"node": "Planilha de dados", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1", "saveDataSuccessExecution": "all", "saveDataErrorExecution": "all"}
+}

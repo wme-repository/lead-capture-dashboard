@@ -91,6 +91,7 @@ model Lead {
   utmCampaign   String?
   utmTerm       String?
   utmContent    String?
+  lp            String?
   // Questionnaire fields
   score       Int?
   grade       String?

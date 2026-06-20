@@ -495,7 +495,7 @@ CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | DNS A record for `leads.esqtools.com` already points to 69.62.89.206 | Environment Availability | Phase 4 (accessible via domain) will fail until corrected |
+| A1 | DNS A record for `leads.esqtools.com` already points to 178.104.14.40 | Environment Availability | Phase 4 (accessible via domain) will fail until corrected |
 | A2 | Node.js 22.x available locally for development | Environment Availability | Dev environment setup; minor |
 | A3 | Easypanel project/service naming results in container name `leads_app` (matches Traefik service URL) | Traefik Pattern | Wrong name means 502 error; must verify at deploy time |
 | A4 | better-auth `nextCookies()` plugin is required for Server Actions cookie-setting in Next.js 15 | Pattern 6 | Login via Server Action won't persist session |

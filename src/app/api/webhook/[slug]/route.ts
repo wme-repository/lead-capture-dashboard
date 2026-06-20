@@ -76,6 +76,7 @@ export async function POST(
         utmCampaign: (data as { utm_campaign?: string }).utm_campaign ?? null,
         utmTerm: (data as { utm_term?: string }).utm_term ?? null,
         utmContent: (data as { utm_content?: string }).utm_content ?? null,
+        lp: (data as { lp?: string }).lp ?? null,
         status: "pending",
       };
 
