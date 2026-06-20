@@ -200,6 +200,23 @@ export async function POST(
         };
       })();
 
+  // 5b. Skip duplicates — same email already registered for this source.
+  // Does not write to sheet, does not count as a new lead.
+  const email = (data.email ?? "").trim();
+  if (email) {
+    const existing = await prisma.lead.findFirst({
+      where: {
+        sourceId: source.id,
+        email: { equals: email, mode: "insensitive" },
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      console.log(`[webhook] duplicate email skipped: ${email} (source=${source.id})`);
+      return json({ duplicate: true }, 200);
+    }
+  }
+
   // 6. Atomic write: lead + two SyncLog rows (one per destination)
   const lead = await prisma.$transaction(async (tx) => {
     const newLead = await tx.lead.create({ data: leadData });
