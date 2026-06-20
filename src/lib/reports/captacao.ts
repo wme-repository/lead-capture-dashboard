@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { askDeepSeek } from '@/lib/integrations/deepseek';
+import { getAdMetricsByLp, type LpAdMetrics } from '@/lib/integrations/meta';
 
 // Brazil (São Paulo) is UTC-3, no DST since 2019.
 const SP_OFFSET_MS = 3 * 60 * 60 * 1000;
@@ -46,6 +46,8 @@ function pct(part: number, total: number): number {
 export interface ScheduledSnapshot {
   data: string;
   hora: string;
+  dataCurta: string;
+  horaCurta: string;
   blocoLabel: string;
   capt: { total: number; janela: number; hoje: number; ontem: number };
   lp: { nome: string; count: number; pct: number }[];
@@ -86,6 +88,8 @@ export async function getScheduledSnapshot(): Promise<ScheduledSnapshot> {
   return {
     data: n.toLocaleDateString('pt-BR'),
     hora: `${String(n.getUTCHours()).padStart(2, '0')}:${String(n.getUTCMinutes()).padStart(2, '0')}`,
+    dataCurta: `${String(n.getUTCDate()).padStart(2, '0')}/${String(n.getUTCMonth() + 1).padStart(2, '0')}`,
+    horaCurta: `${n.getUTCHours()}h`,
     blocoLabel: `${String(win.startHour).padStart(2, '0')}h→${String(win.endHour).padStart(2, '0')}h`,
     capt: { total: captTotal, janela: captJanela, hoje: captToday, ontem: captYesterday },
     lp,
@@ -122,54 +126,96 @@ export async function getQaContext(): Promise<string> {
 
 const LP_EMOJI: Record<string, string> = { LP01: '🔵', LP02: '🟡', 'Sem LP': '⚪' };
 
-async function buildResumo(s: ScheduledSnapshot): Promise<string> {
-  const dados = [
-    `Capt total: ${s.capt.total}, hoje: ${s.capt.hoje}, ontem: ${s.capt.ontem}, nesta janela: ${s.capt.janela}`,
-    `LP: ${s.lp.map((x) => `${x.nome}=${x.count}(${x.pct}%)`).join(', ')}`,
-    `Questionário: ${s.quest.respostas} respostas (${s.quest.respPct}%), qualificados A+B: ${s.quest.qualificados} (${s.quest.qualPct}%), score médio ${s.quest.scoreMedio}`,
-    `Faixas: A=${s.faixas.A} B=${s.faixas.B} C=${s.faixas.C} D=${s.faixas.D}`,
-  ].join('\n');
-  const system =
-    'Você é analista de captação de tráfego. Escreva um RESUMO curto (2 a 4 linhas) sobre os dados. ' +
-    'Use no máximo: 1 linha de leitura geral, 1 linha começando com "⚠️ Atenção:" se houver problema (ex: muitos sem LP, qualidade baixa), e 1 linha começando com "✅ Ação:" com a próxima ação prática. ' +
-    'Tom de gestor, direto, sem inventar números além dos fornecidos.';
-  try {
-    return await askDeepSeek(system, dados);
-  } catch {
-    return '✅ Ação: acompanhar a evolução até 100 leads para validar o score por página.';
-  }
+function money(v: number | null): string {
+  return v == null ? 'n/d' : `R$ ${v.toFixed(2)}`;
 }
 
-export async function formatScheduledReport(s: ScheduledSnapshot): Promise<string> {
+export async function buildScheduledReport(): Promise<string> {
+  const [s, ad] = await Promise.all([
+    getScheduledSnapshot(),
+    getAdMetricsByLp().catch((): Record<string, LpAdMetrics> => ({})),
+  ]);
+
   const sep = '━━━━━━━━━━━━━━';
-  const lpLines = s.lp
-    .map((x) => `${LP_EMOJI[x.nome] ?? '⚫'} ${x.nome}: ${x.count} (${x.pct}%)`)
+  const hasAd = Object.keys(ad).length > 0;
+  const totalSpend = Object.values(ad).reduce((acc, m) => acc + m.spend, 0);
+  const cplGeral = hasAd && s.capt.total > 0 ? totalSpend / s.capt.total : null;
+
+  // Real LPs (exclude "Sem LP"), with CPL, sorted: winner first
+  const realLps = s.lp.filter((x) => x.nome !== 'Sem LP');
+  const lpWithCpl = realLps.map((x) => {
+    const spend = ad[x.nome]?.spend ?? null;
+    const cpl = spend != null && x.count > 0 ? spend / x.count : null;
+    return { ...x, cpl };
+  });
+  // Winner: lowest CPL if we have spend, else most leads
+  let winner: string | null = null;
+  if (hasAd) {
+    const withCpl = lpWithCpl.filter((x) => x.cpl != null);
+    if (withCpl.length) winner = withCpl.sort((a, b) => (a.cpl! - b.cpl!))[0].nome;
+  } else if (lpWithCpl.length) {
+    winner = [...lpWithCpl].sort((a, b) => b.count - a.count)[0].nome;
+  }
+  lpWithCpl.sort((a, b) => b.count - a.count);
+
+  const lpLines = lpWithCpl
+    .map((x) => {
+      const trophy = x.nome === winner ? ' 🏆' : '';
+      return `${LP_EMOJI[x.nome] ?? '⚫'} ${x.nome}: ${x.count} · ${money(x.cpl)}${trophy}`;
+    })
     .join('\n');
+
+  const semLp = s.lp.find((x) => x.nome === 'Sem LP');
+  const semLpLine = semLp ? `⚪ Sem LP: ${semLp.count} (sem rastreio)` : '';
   const semLpWarn =
-    s.semLpPct >= 30 ? `\n⚠️ ${s.semLpPct}% sem LP identificada — revisar UTM / parâmetro da página.` : '';
+    s.semLpPct >= 30
+      ? `⚠️ ${s.semLpPct}% sem LP — corrigir UTM antes de comparar páginas`
+      : '';
+
   const q = s.quest;
-  const tot = q.respostas || 1;
-  const resumo = await buildResumo(s);
+  const custoAB = hasAd && q.qualificados > 0 ? totalSpend / q.qualificados : null;
+
+  // Rule-based action
+  let acao: string;
+  if (s.semLpPct >= 30) {
+    acao = 'validar tracking de LP e seguir até 100 leads.';
+  } else if (s.capt.total < 100) {
+    acao = 'seguir até 100 leads para comparar score × custo por página.';
+  } else {
+    acao = 'comparar CPL A+B por LP e realocar verba para a vencedora.';
+  }
 
   return [
-    `📊 Relatório de Captação — Projeto TRT`,
-    `🕒 ${s.data} · ${s.hora} · (bloco das ${s.blocoLabel})`,
+    `📊 Captação — Projeto TRT`,
+    ``,
+    `🕒 ${s.dataCurta} · ${s.horaCurta} · bloco ${s.blocoLabel}`,
+    ``,
     sep,
-    `🎯 Captação de Leads · Fonte: LEAD/UTM`,
-    `👥 Total: ${s.capt.total} · 🆕 Nesta janela: +${s.capt.janela} · 📅 Hoje: ${s.capt.hoje} · Ontem: ${s.capt.ontem}`,
+    ``,
+    `🎯 Leads · LEAD/UTM`,
+    ``,
+    `👥 Total: ${s.capt.total} · 🆕 no bloco: +${s.capt.janela}`,
+    ``,
+    `💰 Investido: ${money(hasAd ? totalSpend : null)} · CPL: ${money(cplGeral)}`,
+    ``,
     sep,
-    `🌐 Distribuição por LP`,
-    lpLines + semLpWarn,
+    ``,
+    `🌐 Por LP (lead · CPL)`,
+    ``,
+    lpLines,
+    semLpLine,
+    ...(semLpWarn ? ['', semLpWarn] : []),
+    ``,
     sep,
-    `📝 Questionário`,
-    `✅ Respostas: ${q.respostas} de ${s.capt.total} (${q.respPct}% de resposta)`,
-    `🏆 Qualificados A+B: ${q.qualificados} (${q.qualPct}% dos respondentes)`,
-    `⭐ Score médio: ${q.scoreMedio}`,
-    sep,
+    ``,
     `🔥 Faixas de qualidade`,
-    `🟢 A: ${s.faixas.A} (${pct(s.faixas.A, tot)}%) · 🔵 B: ${s.faixas.B} (${pct(s.faixas.B, tot)}%) · 🟡 C: ${s.faixas.C} (${pct(s.faixas.C, tot)}%) · 🔴 D: ${s.faixas.D} (${pct(s.faixas.D, tot)}%)`,
+    ``,
+    `🟢 A: ${s.faixas.A} · 🔵 B: ${s.faixas.B} · 🟡 C: ${s.faixas.C} · 🔴 D: ${s.faixas.D}`,
+    ``,
+    `🏆 A+B: ${q.qualificados} · 💵 custo A+B: ${money(custoAB)}`,
+    ``,
     sep,
-    `📌 Resumo`,
-    resumo,
+    ``,
+    `✅ Ação: ${acao}`,
   ].join('\n');
 }

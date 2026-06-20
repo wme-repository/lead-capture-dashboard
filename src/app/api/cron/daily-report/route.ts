@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getScheduledSnapshot, formatScheduledReport } from '@/lib/reports/captacao';
+import { buildScheduledReport } from '@/lib/reports/captacao';
 import { sendWhatsAppText } from '@/lib/integrations/evolution';
 
 export async function GET(request: NextRequest) {
@@ -7,8 +7,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const snapshot = await getScheduledSnapshot();
-  const text = await formatScheduledReport(snapshot);
+  const text = await buildScheduledReport();
   await sendWhatsAppText(text);
 
   return NextResponse.json({ ok: true, sent: true });
