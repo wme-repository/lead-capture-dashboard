@@ -11,7 +11,58 @@ function deriveLp(explicit?: string, paginaCaptura?: string): string | null {
   if (explicit) return explicit;
   if (!paginaCaptura) return null;
   if (paginaCaptura.includes("trt.oesquadraodeelite.com.br")) return "LP01";
+  if (paginaCaptura.includes("lp.oesquadraodeelite.com.br")) return "LP02";
   return null;
+}
+
+// WordPress sends User-Agent like "WordPress/7.0; https://lp.oesquadraodeelite.com.br"
+function urlFromUserAgent(ua: string): string | null {
+  const m = ua.match(/https?:\/\/[^\s;]+/);
+  return m ? m[0] : null;
+}
+
+function firstValue(
+  raw: Record<string, unknown>,
+  keys: string[],
+): string | undefined {
+  for (const k of keys) {
+    const v = raw[k];
+    if (typeof v === "string" && v.trim() !== "") return v;
+  }
+  return undefined;
+}
+
+// Normalize the many field-name variants LPs use (Elementor sends "Nome",
+// "Whatsapp com DDD"; the LP01 system sends name/email/phone + nested meta/utms).
+function normalizeStandardBody(
+  raw: Record<string, unknown>,
+  ua: string,
+  referer: string,
+  origin: string,
+): Record<string, unknown> {
+  const meta = (raw.meta as { page_url?: string } | undefined) ?? undefined;
+  const paginaCaptura =
+    firstValue(raw, ["pagina_captura"]) ??
+    meta?.page_url ??
+    urlFromUserAgent(ua) ??
+    (referer !== "none" ? referer : undefined) ??
+    (origin !== "none" ? origin : undefined);
+
+  return {
+    ...raw,
+    name: firstValue(raw, ["name", "Nome", "nome"]),
+    email: firstValue(raw, ["email", "Email", "E-mail", "e-mail"]),
+    phone: firstValue(raw, [
+      "phone",
+      "telefone",
+      "Telefone",
+      "Whatsapp com DDD",
+      "whatsapp",
+      "WhatsApp",
+      "Whatsapp",
+    ]),
+    pagina_captura: paginaCaptura,
+  };
 }
 
 export async function POST(
@@ -63,13 +114,18 @@ export async function POST(
     console.log(`[webhook] FULL BODY: ${JSON.stringify(body)}`);
   }
 
-  // 4. Validate against schema for this source
+  // 4. Normalize (standard only) then validate against schema for this source
   const schema =
     source.schemaType === "questionnaire"
       ? QuestionnaireLeadSchema
       : StandardLeadSchema;
 
-  const result = schema.safeParse(body);
+  const payload =
+    source.schemaType === "standard"
+      ? normalizeStandardBody(body, ua, referer, origin)
+      : body;
+
+  const result = schema.safeParse(payload);
   if (!result.success) {
     return NextResponse.json(
       { error: "Validation failed", details: result.error.flatten() },
