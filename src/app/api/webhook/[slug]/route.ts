@@ -19,12 +19,6 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // 2. Authenticate
-  const token = request.headers.get("x-webhook-token");
-  if (token !== source.token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   // Log incoming request origin
   const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown";
   const ua = request.headers.get("user-agent") ?? "unknown";
