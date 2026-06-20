@@ -10,12 +10,19 @@ function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
+const TZ = 'America/Sao_Paulo';
+
 function formatDate(d: Date): string {
-  return d.toLocaleDateString('pt-BR'); // dd/MM/yyyy
+  return d.toLocaleDateString('pt-BR', { timeZone: TZ }); // dd/MM/yyyy
 }
 
 function formatTime(d: Date): string {
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return d.toLocaleTimeString('pt-BR', {
+    timeZone: TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 type LeadFields = Pick<
