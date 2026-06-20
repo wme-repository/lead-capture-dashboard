@@ -90,26 +90,41 @@ export async function POST(
         answers: (data as { answers: Record<string, unknown> }).answers as Prisma.InputJsonValue,
         status: "pending",
       }
-    : {
-        sourceId: source.id,
-        schemaType: source.schemaType,
-        name: data.name,
-        email: data.email,
-        phone: (data as { phone?: string }).phone ?? null,
-        paginaCaptura: (data as { pagina_captura?: string }).pagina_captura ?? null,
-        pesquisa: (data as { pesquisa?: string }).pesquisa ?? null,
-        grupo: (data as { grupo?: string }).grupo ?? null,
-        utmSource: (data as { utm_source?: string }).utm_source ?? null,
-        utmMedium: (data as { utm_medium?: string }).utm_medium ?? null,
-        utmCampaign: (data as { utm_campaign?: string }).utm_campaign ?? null,
-        utmTerm: (data as { utm_term?: string }).utm_term ?? null,
-        utmContent: (data as { utm_content?: string }).utm_content ?? null,
-        lp: deriveLp(
-          (data as { lp?: string }).lp,
-          (data as { pagina_captura?: string }).pagina_captura,
-        ),
-        status: "pending",
-      };
+    : (() => {
+        const d = data as {
+          phone?: string;
+          pagina_captura?: string;
+          pesquisa?: string;
+          grupo?: string;
+          utm_source?: string;
+          utm_medium?: string;
+          utm_campaign?: string;
+          utm_term?: string;
+          utm_content?: string;
+          lp?: string;
+          utms?: Record<string, string>;
+          meta?: { page_url?: string };
+        };
+        const utms = d.utms ?? {};
+        const paginaCaptura = d.pagina_captura ?? d.meta?.page_url ?? null;
+        return {
+          sourceId: source.id,
+          schemaType: source.schemaType,
+          name: data.name,
+          email: data.email,
+          phone: d.phone ?? null,
+          paginaCaptura,
+          pesquisa: d.pesquisa ?? null,
+          grupo: d.grupo ?? null,
+          utmSource: d.utm_source ?? utms.utm_source ?? null,
+          utmMedium: d.utm_medium ?? utms.utm_medium ?? null,
+          utmCampaign: d.utm_campaign ?? utms.utm_campaign ?? null,
+          utmTerm: d.utm_term ?? utms.utm_term ?? null,
+          utmContent: d.utm_content ?? utms.utm_content ?? null,
+          lp: deriveLp(d.lp, paginaCaptura ?? undefined),
+          status: "pending",
+        };
+      })();
 
   // 6. Atomic write: lead + two SyncLog rows (one per destination)
   const lead = await prisma.$transaction(async (tx) => {

@@ -13,6 +13,9 @@ export const StandardLeadSchema = z.object({
   utm_term: z.string().optional(),
   utm_content: z.string().optional(),
   lp: z.string().optional(),
+  // Nested payload from the LP system
+  utms: z.record(z.string(), z.string()).optional(),
+  meta: z.object({ page_url: z.string().optional() }).loose().optional(),
 });
 
 export const QuestionnaireLeadSchema = z.object({
