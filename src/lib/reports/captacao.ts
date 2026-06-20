@@ -1,113 +1,156 @@
 import { prisma } from '@/lib/prisma';
+import { askDeepSeek } from '@/lib/integrations/deepseek';
 
 // Brazil (São Paulo) is UTC-3, no DST since 2019.
 const SP_OFFSET_MS = 3 * 60 * 60 * 1000;
+const SLOTS = [8, 12, 16, 20]; // scheduled report hours (SP)
 
-function spDayBounds(daysAgo = 0): { start: Date; end: Date; label: string } {
-  const nowSp = new Date(Date.now() - SP_OFFSET_MS);
-  const y = nowSp.getUTCFullYear();
-  const m = nowSp.getUTCMonth();
-  const d = nowSp.getUTCDate() - daysAgo;
-  // Midnight SP expressed as a UTC instant
-  const start = new Date(Date.UTC(y, m, d) + SP_OFFSET_MS);
+function nowSp(): Date {
+  return new Date(Date.now() - SP_OFFSET_MS);
+}
+
+function spInstant(y: number, m: number, d: number, h = 0): Date {
+  // SP wall-clock (y,m,d,h) expressed as a real UTC instant
+  return new Date(Date.UTC(y, m, d, h) + SP_OFFSET_MS);
+}
+
+function dayStart(daysAgo = 0): { start: Date; end: Date } {
+  const n = nowSp();
+  const start = spInstant(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() - daysAgo, 0);
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-  const label = new Date(Date.UTC(y, m, d)).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-  });
-  return { start, end, label };
+  return { start, end };
 }
 
-export interface CaptacaoSnapshot {
-  geradoEm: string;
-  capturas: {
-    total: number;
-    hoje: number;
-    ontem: number;
-    porLp: Record<string, number>;
-  };
-  questionario: {
-    total: number;
-    hoje: number;
-    qualificados: number; // grade A or B
-    scoreMedio: number;
-    porFaixa: Record<string, number>;
-  };
+// Window since the previous scheduled slot (8/12/16/20).
+function currentWindow(): { start: Date; startHour: number; endHour: number } {
+  const n = nowSp();
+  const h = n.getUTCHours();
+  // current slot = largest slot <= h (fallback to first)
+  const cur = [...SLOTS].reverse().find((s) => s <= h) ?? SLOTS[0];
+  const idx = SLOTS.indexOf(cur);
+  const prev = idx > 0 ? SLOTS[idx - 1] : SLOTS[SLOTS.length - 1];
+  const overnight = idx === 0; // 8h report → window starts yesterday 20h
+  const start = spInstant(
+    n.getUTCFullYear(),
+    n.getUTCMonth(),
+    n.getUTCDate() - (overnight ? 1 : 0),
+    prev,
+  );
+  return { start, startHour: prev, endHour: cur };
 }
 
-export async function getCaptacaoSnapshot(): Promise<CaptacaoSnapshot> {
-  const today = spDayBounds(0);
-  const yesterday = spDayBounds(1);
+function pct(part: number, total: number): number {
+  return total > 0 ? Math.round((part / total) * 100) : 0;
+}
 
-  const [
-    captTotal,
-    captToday,
-    captYesterday,
-    lpGroups,
-    questTotal,
-    questToday,
-    qualified,
-    gradeGroups,
-    scoreAgg,
-  ] = await Promise.all([
-    prisma.lead.count({ where: { schemaType: 'standard' } }),
-    prisma.lead.count({ where: { schemaType: 'standard', receivedAt: { gte: today.start, lt: today.end } } }),
-    prisma.lead.count({ where: { schemaType: 'standard', receivedAt: { gte: yesterday.start, lt: yesterday.end } } }),
-    prisma.lead.groupBy({ by: ['lp'], where: { schemaType: 'standard' }, _count: true }),
-    prisma.lead.count({ where: { schemaType: 'questionnaire' } }),
-    prisma.lead.count({ where: { schemaType: 'questionnaire', receivedAt: { gte: today.start, lt: today.end } } }),
-    prisma.lead.count({ where: { schemaType: 'questionnaire', grade: { in: ['A', 'B'] } } }),
-    prisma.lead.groupBy({ by: ['grade'], where: { schemaType: 'questionnaire' }, _count: true }),
-    prisma.lead.aggregate({ where: { schemaType: 'questionnaire' }, _avg: { score: true } }),
-  ]);
+export interface ScheduledSnapshot {
+  data: string;
+  hora: string;
+  blocoLabel: string;
+  capt: { total: number; janela: number; hoje: number; ontem: number };
+  lp: { nome: string; count: number; pct: number }[];
+  semLpPct: number;
+  quest: { respostas: number; respPct: number; qualificados: number; qualPct: number; scoreMedio: number };
+  faixas: { A: number; B: number; C: number; D: number };
+}
 
-  const porLp: Record<string, number> = {};
-  for (const g of lpGroups) porLp[g.lp ?? 'Sem LP'] = g._count;
+export async function getScheduledSnapshot(): Promise<ScheduledSnapshot> {
+  const n = nowSp();
+  const today = dayStart(0);
+  const yesterday = dayStart(1);
+  const win = currentWindow();
 
-  const porFaixa: Record<string, number> = {};
-  for (const g of gradeGroups) porFaixa[g.grade ?? 'Sem faixa'] = g._count;
+  const [captTotal, captJanela, captToday, captYesterday, lpGroups, questTotal, qualified, gradeGroups, scoreAgg] =
+    await Promise.all([
+      prisma.lead.count({ where: { schemaType: 'standard' } }),
+      prisma.lead.count({ where: { schemaType: 'standard', receivedAt: { gte: win.start } } }),
+      prisma.lead.count({ where: { schemaType: 'standard', receivedAt: { gte: today.start, lt: today.end } } }),
+      prisma.lead.count({ where: { schemaType: 'standard', receivedAt: { gte: yesterday.start, lt: yesterday.end } } }),
+      prisma.lead.groupBy({ by: ['lp'], where: { schemaType: 'standard' }, _count: true }),
+      prisma.lead.count({ where: { schemaType: 'questionnaire' } }),
+      prisma.lead.count({ where: { schemaType: 'questionnaire', grade: { in: ['A', 'B'] } } }),
+      prisma.lead.groupBy({ by: ['grade'], where: { schemaType: 'questionnaire' }, _count: true }),
+      prisma.lead.aggregate({ where: { schemaType: 'questionnaire' }, _avg: { score: true } }),
+    ]);
+
+  const lp = lpGroups
+    .map((g) => ({ nome: g.lp ?? 'Sem LP', count: g._count, pct: pct(g._count, captTotal) }))
+    .sort((a, b) => b.count - a.count);
+  const semLp = lp.find((x) => x.nome === 'Sem LP');
+
+  const faixas = { A: 0, B: 0, C: 0, D: 0 };
+  for (const g of gradeGroups) {
+    if (g.grade && g.grade in faixas) faixas[g.grade as keyof typeof faixas] = g._count;
+  }
 
   return {
-    geradoEm: new Date(Date.now() - SP_OFFSET_MS).toLocaleString('pt-BR'),
-    capturas: { total: captTotal, hoje: captToday, ontem: captYesterday, porLp },
-    questionario: {
-      total: questTotal,
-      hoje: questToday,
+    data: n.toLocaleDateString('pt-BR'),
+    hora: `${String(n.getUTCHours()).padStart(2, '0')}:${String(n.getUTCMinutes()).padStart(2, '0')}`,
+    blocoLabel: `${String(win.startHour).padStart(2, '0')}h→${String(win.endHour).padStart(2, '0')}h`,
+    capt: { total: captTotal, janela: captJanela, hoje: captToday, ontem: captYesterday },
+    lp,
+    semLpPct: semLp?.pct ?? 0,
+    quest: {
+      respostas: questTotal,
+      respPct: pct(questTotal, captTotal),
       qualificados: qualified,
+      qualPct: pct(qualified, questTotal),
       scoreMedio: Math.round(scoreAgg._avg.score ?? 0),
-      porFaixa,
     },
+    faixas,
   };
 }
 
-export function formatDailyReport(s: CaptacaoSnapshot): string {
-  const lpLines = Object.entries(s.capturas.porLp)
-    .map(([lp, n]) => `   • ${lp}: ${n}`)
-    .join('\n') || '   • (sem dados)';
-  const faixaLines = Object.entries(s.questionario.porFaixa)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([f, n]) => `   • Faixa ${f}: ${n}`)
-    .join('\n') || '   • (sem dados)';
+const LP_EMOJI: Record<string, string> = { LP01: '🔵', LP02: '🟡', 'Sem LP': '⚪' };
 
-  const delta = s.capturas.hoje - s.capturas.ontem;
-  const trend = delta > 0 ? `📈 +${delta}` : delta < 0 ? `📉 ${delta}` : '➡️ igual';
+async function buildResumo(s: ScheduledSnapshot): Promise<string> {
+  const dados = [
+    `Capt total: ${s.capt.total}, hoje: ${s.capt.hoje}, ontem: ${s.capt.ontem}, nesta janela: ${s.capt.janela}`,
+    `LP: ${s.lp.map((x) => `${x.nome}=${x.count}(${x.pct}%)`).join(', ')}`,
+    `Questionário: ${s.quest.respostas} respostas (${s.quest.respPct}%), qualificados A+B: ${s.quest.qualificados} (${s.quest.qualPct}%), score médio ${s.quest.scoreMedio}`,
+    `Faixas: A=${s.faixas.A} B=${s.faixas.B} C=${s.faixas.C} D=${s.faixas.D}`,
+  ].join('\n');
+  const system =
+    'Você é analista de captação de tráfego. Escreva um RESUMO curto (2 a 4 linhas) sobre os dados. ' +
+    'Use no máximo: 1 linha de leitura geral, 1 linha começando com "⚠️ Atenção:" se houver problema (ex: muitos sem LP, qualidade baixa), e 1 linha começando com "✅ Ação:" com a próxima ação prática. ' +
+    'Tom de gestor, direto, sem inventar números além dos fornecidos.';
+  try {
+    return await askDeepSeek(system, dados);
+  } catch {
+    return '✅ Ação: acompanhar a evolução até 100 leads para validar o score por página.';
+  }
+}
+
+export async function formatScheduledReport(s: ScheduledSnapshot): Promise<string> {
+  const sep = '━━━━━━━━━━━━━━';
+  const lpLines = s.lp
+    .map((x) => `${LP_EMOJI[x.nome] ?? '⚫'} ${x.nome}: ${x.count} (${x.pct}%)`)
+    .join('\n');
+  const semLpWarn =
+    s.semLpPct >= 30 ? `\n⚠️ ${s.semLpPct}% sem LP identificada — revisar UTM / parâmetro da página.` : '';
+  const q = s.quest;
+  const tot = q.respostas || 1;
+  const resumo = await buildResumo(s);
 
   return [
-    `📊 *Relatório de Captação — Projeto TRT*`,
-    `_${s.geradoEm}_`,
-    ``,
-    `*Captação (LEAD/UTM)*`,
-    `   • Total: ${s.capturas.total}`,
-    `   • Hoje: ${s.capturas.hoje} (ontem: ${s.capturas.ontem}) ${trend}`,
-    `   *Por LP:*`,
-    lpLines,
-    ``,
-    `*Questionário*`,
-    `   • Total respostas: ${s.questionario.total}`,
-    `   • Hoje: ${s.questionario.hoje}`,
-    `   • Qualificados (A+B): ${s.questionario.qualificados}`,
-    `   • Score médio: ${s.questionario.scoreMedio}`,
-    `   *Por faixa:*`,
-    faixaLines,
+    `📊 Relatório de Captação — Projeto TRT`,
+    `🕒 ${s.data} · ${s.hora} · (bloco das ${s.blocoLabel})`,
+    sep,
+    `🎯 Captação de Leads · Fonte: LEAD/UTM`,
+    `👥 Total: ${s.capt.total} · 🆕 Nesta janela: +${s.capt.janela} · 📅 Hoje: ${s.capt.hoje} · Ontem: ${s.capt.ontem}`,
+    sep,
+    `🌐 Distribuição por LP`,
+    lpLines + semLpWarn,
+    sep,
+    `📝 Questionário`,
+    `✅ Respostas: ${q.respostas} de ${s.capt.total} (${q.respPct}% de resposta)`,
+    `🏆 Qualificados A+B: ${q.qualificados} (${q.qualPct}% dos respondentes)`,
+    `⭐ Score médio: ${q.scoreMedio}`,
+    sep,
+    `🔥 Faixas de qualidade`,
+    `🟢 A: ${s.faixas.A} (${pct(s.faixas.A, tot)}%) · 🔵 B: ${s.faixas.B} (${pct(s.faixas.B, tot)}%) · 🟡 C: ${s.faixas.C} (${pct(s.faixas.C, tot)}%) · 🔴 D: ${s.faixas.D} (${pct(s.faixas.D, tot)}%)`,
+    sep,
+    `📌 Resumo`,
+    resumo,
   ].join('\n');
 }
