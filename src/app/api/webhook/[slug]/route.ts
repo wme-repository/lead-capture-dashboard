@@ -7,6 +7,21 @@ import {
   QuestionnaireLeadSchema,
 } from "@/lib/schemas/webhook";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, x-webhook-token",
+  "Access-Control-Max-Age": "86400",
+};
+
+function json(body: unknown, status: number) {
+  return NextResponse.json(body, { status, headers: CORS_HEADERS });
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 function deriveLp(explicit?: string, paginaCaptura?: string): string | null {
   if (explicit) return explicit;
   if (!paginaCaptura) return null;
@@ -74,7 +89,7 @@ export async function POST(
   // 1. Look up source
   const source = await prisma.source.findUnique({ where: { slug } });
   if (!source) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return json({ error: "Not found" }, 404);
   }
 
   // Log incoming request origin
@@ -107,7 +122,7 @@ export async function POST(
     body = null;
   }
   if (!body) {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+    return json({ error: "Invalid body" }, 400);
   }
   console.log(`[webhook] body keys: ${Object.keys(body).join(",")}`);
   if (slug === "lead") {
@@ -127,9 +142,9 @@ export async function POST(
 
   const result = schema.safeParse(payload);
   if (!result.success) {
-    return NextResponse.json(
+    return json(
       { error: "Validation failed", details: result.error.flatten() },
-      { status: 422 }
+      422
     );
   }
 
@@ -211,5 +226,5 @@ export async function POST(
     console.error("[webhook] triggerIntegrations error:", err);
   }
 
-  return NextResponse.json({ id: lead.id }, { status: 200 });
+  return json({ id: lead.id }, 200);
 }
