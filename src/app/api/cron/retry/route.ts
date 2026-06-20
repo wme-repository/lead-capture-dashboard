@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { appendLeadToSheet } from '@/lib/integrations/sheets';
 import { postToDataCrazy } from '@/lib/integrations/datacrazy';
 import { updateSyncLogSuccess, updateSyncLogFailure } from '@/lib/integrations/retry';
+import { sendWhatsAppText } from '@/lib/integrations/evolution';
 
 const MAX_ATTEMPTS = 10;
 
@@ -35,6 +36,21 @@ export async function GET(request: NextRequest) {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await updateSyncLogFailure(row.id, message, row.attemptCount);
+
+      // Permanent failure (last attempt) → alert the group once
+      if (row.attemptCount + 1 >= MAX_ATTEMPTS) {
+        try {
+          await sendWhatsAppText(
+            `🔴 *Falha de sincronização — Projeto TRT*\n\n` +
+              `Lead: ${row.lead.name ?? '(sem nome)'} (${row.lead.email ?? 's/ email'})\n` +
+              `Destino: *${row.destination}*\n` +
+              `Tentativas esgotadas (${MAX_ATTEMPTS}).\n` +
+              `Erro: ${message.slice(0, 150)}`
+          );
+        } catch (alertErr) {
+          console.error('[retry] alert error:', alertErr);
+        }
+      }
     }
   }
 
