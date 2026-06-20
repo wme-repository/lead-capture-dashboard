@@ -7,6 +7,13 @@ import {
   QuestionnaireLeadSchema,
 } from "@/lib/schemas/webhook";
 
+function deriveLp(explicit?: string, paginaCaptura?: string): string | null {
+  if (explicit) return explicit;
+  if (!paginaCaptura) return null;
+  if (paginaCaptura.includes("trt.oesquadraodeelite.com.br")) return "LP01";
+  return null;
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -76,7 +83,10 @@ export async function POST(
         utmCampaign: (data as { utm_campaign?: string }).utm_campaign ?? null,
         utmTerm: (data as { utm_term?: string }).utm_term ?? null,
         utmContent: (data as { utm_content?: string }).utm_content ?? null,
-        lp: (data as { lp?: string }).lp ?? null,
+        lp: deriveLp(
+          (data as { lp?: string }).lp,
+          (data as { pagina_captura?: string }).pagina_captura,
+        ),
         status: "pending",
       };
 
