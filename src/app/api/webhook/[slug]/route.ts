@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { triggerIntegrations } from "@/lib/integrations/trigger";
+import { sendWhatsAppText } from "@/lib/integrations/evolution";
 import {
   StandardLeadSchema,
   QuestionnaireLeadSchema,
@@ -241,6 +242,23 @@ export async function POST(
     await triggerIntegrations(leadWithRelations);
   } catch (err) {
     console.error("[webhook] triggerIntegrations error:", err);
+  }
+
+  // 8. Milestone notification on captação (non-fatal)
+  if (source.schemaType === "standard") {
+    try {
+      const every = Number(process.env.MILESTONE_EVERY ?? 100);
+      if (every > 0) {
+        const total = await prisma.lead.count({ where: { schemaType: "standard" } });
+        if (total > 0 && total % every === 0) {
+          await sendWhatsAppText(
+            `🎯 *Marco de captação — Projeto TRT*\n\nChegamos a *${total}* leads capturados!`
+          );
+        }
+      }
+    } catch (err) {
+      console.error("[webhook] milestone error:", err);
+    }
   }
 
   return json({ id: lead.id }, 200);
