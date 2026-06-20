@@ -3,6 +3,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { triggerIntegrations } from "@/lib/integrations/trigger";
 import { sendWhatsAppText } from "@/lib/integrations/evolution";
+import { buildBlockReport } from "@/lib/reports/block";
 import {
   StandardLeadSchema,
   QuestionnaireLeadSchema,
@@ -244,20 +245,19 @@ export async function POST(
     console.error("[webhook] triggerIntegrations error:", err);
   }
 
-  // 8. Milestone notification on captação (non-fatal)
+  // 8. Block report on captação milestone (non-fatal)
   if (source.schemaType === "standard") {
     try {
       const every = Number(process.env.MILESTONE_EVERY ?? 100);
       if (every > 0) {
         const total = await prisma.lead.count({ where: { schemaType: "standard" } });
         if (total > 0 && total % every === 0) {
-          await sendWhatsAppText(
-            `🎯 *Marco de captação — Projeto TRT*\n\nChegamos a *${total}* leads capturados!`
-          );
+          const report = await buildBlockReport();
+          await sendWhatsAppText(report);
         }
       }
     } catch (err) {
-      console.error("[webhook] milestone error:", err);
+      console.error("[webhook] block report error:", err);
     }
   }
 
