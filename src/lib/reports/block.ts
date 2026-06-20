@@ -139,7 +139,10 @@ function fmtLpData(
 }
 
 export async function buildBlockReport(): Promise<string> {
-  const [leadByLp, adByLp] = await Promise.all([getLeadDataByLp(), getAdMetricsByLp().catch(() => ({}))]);
+  const [leadByLp, adByLp] = await Promise.all([
+    getLeadDataByLp(),
+    getAdMetricsByLp().catch((): Record<string, LpAdMetrics> => ({})),
+  ]);
 
   const totalLeads = Object.values(leadByLp).reduce((s, d) => s + d.leads, 0);
   const totalScore = Object.values(leadByLp).reduce((s, d) => s + d.scoreTotal, 0);
