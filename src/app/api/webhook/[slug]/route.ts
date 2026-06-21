@@ -219,20 +219,31 @@ export async function POST(
     }
   }
 
-  // 6. Atomic write: lead + two SyncLog rows (one per destination)
-  const lead = await prisma.$transaction(async (tx) => {
-    const newLead = await tx.lead.create({ data: leadData });
+  // 6. Atomic write: lead + two SyncLog rows (one per destination).
+  // The unique index (sourceId, lower(email)) makes dedup race-proof: a concurrent
+  // duplicate fails here with P2002 and is skipped — so the sheet never gets duplicates.
+  let lead;
+  try {
+    lead = await prisma.$transaction(async (tx) => {
+      const newLead = await tx.lead.create({ data: leadData });
 
-    const syncRows = [
-      { leadId: newLead.id, destination: "sheets", status: "pending" },
-    ];
-    if (source.schemaType === "standard") {
-      syncRows.push({ leadId: newLead.id, destination: "datacrazy", status: "pending" });
+      const syncRows = [
+        { leadId: newLead.id, destination: "sheets", status: "pending" },
+      ];
+      if (source.schemaType === "standard") {
+        syncRows.push({ leadId: newLead.id, destination: "datacrazy", status: "pending" });
+      }
+      await tx.syncLog.createMany({ data: syncRows });
+
+      return newLead;
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      console.log(`[webhook] duplicate email skipped (race): ${email} (source=${source.id})`);
+      return json({ duplicate: true }, 200);
     }
-    await tx.syncLog.createMany({ data: syncRows });
-
-    return newLead;
-  });
+    throw err;
+  }
 
   // Respond immediately; run sync + milestone AFTER the response so slow
   // destinations (Sheets/DataCrazy) never make the LP's webhook time out.
