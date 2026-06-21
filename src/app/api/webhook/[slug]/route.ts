@@ -32,6 +32,21 @@ function deriveLp(explicit?: string, paginaCaptura?: string): string | null {
   return null;
 }
 
+// Dashboard reads answers by named keys; the quiz sends "1".."11". Keep the
+// numeric keys (the Sheet uses them) and add named keys by position.
+const SURVEY_NAMED_KEYS = [
+  "nivel_concursos", "estudou_tribunal", "conhece_thallius", "motivo_projeto",
+  "idade", "renda", "genero", "escolaridade", "situacao", "tempo_esquadrao", "expectativas",
+];
+function augmentAnswers(raw: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...raw };
+  SURVEY_NAMED_KEYS.forEach((name, i) => {
+    const v = raw[String(i + 1)];
+    if (v != null && v !== "" && out[name] == null) out[name] = v;
+  });
+  return out;
+}
+
 // WordPress sends User-Agent like "WordPress/7.0; https://lp.oesquadraodeelite.com.br"
 function urlFromUserAgent(ua: string): string | null {
   const m = ua.match(/https?:\/\/[^\s;]+/);
@@ -160,7 +175,9 @@ export async function POST(
         phone: (data as { phone?: string }).phone ?? null,
         score: (data as { score: number }).score,
         grade: (data as { grade: string }).grade,
-        answers: (data as { answers: Record<string, unknown> }).answers as Prisma.InputJsonValue,
+        answers: augmentAnswers(
+          (data as { answers: Record<string, unknown> }).answers ?? {}
+        ) as Prisma.InputJsonValue,
         status: "pending",
       }
     : (() => {
