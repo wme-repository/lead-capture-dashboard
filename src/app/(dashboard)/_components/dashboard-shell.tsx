@@ -210,6 +210,18 @@ function ExportBtn() {
   );
 }
 
+function MetaExportBtn() {
+  return (
+    <a
+      href="/api/export/meta"
+      title="Exporta nome, email e telefone (emails únicos) para subir no Meta Ads"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+    >
+      CSV Meta Ads
+    </a>
+  );
+}
+
 export default function DashboardShell({ data, period, sourceSlug }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("captacao");
@@ -314,6 +326,7 @@ export default function DashboardShell({ data, period, sourceSlug }: Props) {
             {data.sources.map(s => <option key={s.slug} value={s.slug}>{s.name}</option>)}
           </select>
           <ExportBtn />
+          <MetaExportBtn />
           <button onClick={() => router.refresh()}
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50">
             <RefreshCw size={13} /> Atualizar
