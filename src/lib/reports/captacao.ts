@@ -107,9 +107,10 @@ export async function getScheduledSnapshot(): Promise<ScheduledSnapshot> {
 
 // Plain-text data snapshot for the Q&A assistant context.
 export async function getQaContext(): Promise<string> {
-  const [s, sources] = await Promise.all([
+  const [s, sources, ad] = await Promise.all([
     getScheduledSnapshot(),
     prisma.source.findMany({ select: { slug: true, sheetsId: true } }),
+    getAdMetricsByLp().catch((): Record<string, LpAdMetrics> => ({})),
   ]);
 
   const sheetUrl = (slug: string) => {
@@ -117,8 +118,35 @@ export async function getQaContext(): Promise<string> {
     return id ? `https://docs.google.com/spreadsheets/d/${id}/edit` : '(não configurada)';
   };
 
+  const hasAd = Object.keys(ad).length > 0;
+  const totalSpend = Object.values(ad).reduce((acc, m) => acc + m.spend, 0);
+  const budgetTotal = Number(process.env.REPORT_BUDGET_TOTAL ?? 0) || null;
+  const leadsByLp = (lp: string) => s.lp.find((x) => x.nome === lp)?.count ?? 0;
+
+  const adLines = hasAd
+    ? Object.entries(ad).map(([lp, m]) => {
+        const leads = leadsByLp(lp);
+        const cpl = leads > 0 ? `R$ ${(m.spend / leads).toFixed(2)}` : 'n/d';
+        const connect = m.linkClicks > 0 ? `${((m.lpViews / m.linkClicks) * 100).toFixed(1)}%` : 'n/d';
+        return `- ${lp}: investido ${money(m.spend)}, CPL ${cpl}, CTR ${m.ctr.toFixed(2)}%, Connect Rate ${connect}`;
+      })
+    : ['- Campanhas ainda não geraram dados de gasto (n/d).'];
+
+  const orcamento = budgetTotal
+    ? `Orçamento total R$ ${budgetTotal.toLocaleString('pt-BR')} · Gasto ${
+        hasAd ? money(totalSpend) + ` (${((totalSpend / budgetTotal) * 100).toFixed(1)}%)` : 'n/d'
+      } · Falta ${hasAd ? money(budgetTotal - totalSpend) : 'n/d'}`
+    : 'Orçamento não configurado.';
+
   return [
     `DADOS ATUAIS DA CAPTAÇÃO (Projeto TRT) — ${s.data} ${s.hora}`,
+    ``,
+    `CONTEXTO DO LANÇAMENTO:`,
+    `- Projeto TRT: captação para o lançamento (aulas ao vivo de 6 a 9 de julho de 2026).`,
+    `- 2 landing pages: LP01 (trt.oesquadraodeelite.com.br) e LP02 (lp.oesquadraodeelite.com.br).`,
+    `- Fluxo do lead: preenche a LP (nome/email/telefone) e depois responde o questionário (11 perguntas) que gera o LeadScore e a faixa (A, B, C ou D). Qualificados = faixa A+B.`,
+    `- Campanhas Meta rodam de 21/06 a 06/07/2026, orçamento de R$ 6.300/dia.`,
+    `- Destinos de cada lead: Google Sheets, CRM DataCrazy (dispara WhatsApp) e banco Supabase.`,
     ``,
     `Captação (LEAD/UTM):`,
     `- Total de leads: ${s.capt.total}`,
@@ -130,6 +158,10 @@ export async function getQaContext(): Promise<string> {
     `- Qualificados A+B: ${s.quest.qualificados} (${s.quest.qualPct}% dos respondentes)`,
     `- Score médio: ${s.quest.scoreMedio}`,
     `- Faixas: A=${s.faixas.A}, B=${s.faixas.B}, C=${s.faixas.C}, D=${s.faixas.D}`,
+    ``,
+    `Métricas de anúncio (Meta Ads):`,
+    ...adLines,
+    `- ${orcamento}`,
     ``,
     `Links das planilhas (Google Sheets):`,
     `- Planilha de Captação: ${sheetUrl('lead')}`,
