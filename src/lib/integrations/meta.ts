@@ -142,6 +142,7 @@ export interface ConjuntoRow {
 export interface CampanhaBreakdown {
   campanha: string;
   lp: string | null;
+  temperatura: string | null;
   budgetDia: number;
   gasto: number;
   leads: number;
@@ -182,6 +183,10 @@ export async function getMetaConjuntos(): Promise<CampanhaBreakdown[]> {
     const u = name.toUpperCase();
     return u.includes('LP01') ? 'LP01' : u.includes('LP02') ? 'LP02' : null;
   };
+  const tempOf = (name: string) => {
+    const u = name.toUpperCase();
+    return u.includes('QUENTE') ? 'QUENTE' : u.includes('FRIO') ? 'FRIO' : null;
+  };
   const spendByAdset = new Map<string, { gasto: number; leads: number }>();
   for (const ins of insights) {
     if (!ins.adset_id) continue;
@@ -198,7 +203,7 @@ export async function getMetaConjuntos(): Promise<CampanhaBreakdown[]> {
     if (!campName) continue;
     const c =
       byCampaign.get(campId) ??
-      ({ campanha: campName, lp: lpOf(campName), budgetDia: 0, gasto: 0, leads: 0, cpl: null, conjuntos: [] } as CampanhaBreakdown);
+      ({ campanha: campName, lp: lpOf(campName), temperatura: tempOf(campName), budgetDia: 0, gasto: 0, leads: 0, cpl: null, conjuntos: [] } as CampanhaBreakdown);
     const sp = spendByAdset.get(a.id ?? '') ?? { gasto: 0, leads: 0 };
     const budget = a.daily_budget ? parseInt(a.daily_budget, 10) / 100 : 0;
     c.conjuntos.push({
