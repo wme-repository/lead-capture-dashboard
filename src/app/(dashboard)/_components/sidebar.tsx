@@ -14,6 +14,7 @@ import {
   Table2,
   GitFork,
   Wallet,
+  Scale,
 } from "lucide-react";
 import ThemeToggle from "./theme-toggle";
 
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/leads", label: "Leads", icon: Users },
   { href: "/campanhas", label: "Campanhas", icon: Megaphone },
   { href: "/conjuntos", label: "Conjuntos", icon: Wallet },
+  { href: "/orcamento-decisao", label: "Orçamento & Decisão", icon: Scale },
   { href: "/fontes", label: "Fontes", icon: Plug },
   { href: "/ab-tests", label: "A/B Tests", icon: FlaskConical },
   { href: "/integracoes", label: "Integrações", icon: Puzzle },
