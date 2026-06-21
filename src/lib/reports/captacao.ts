@@ -127,7 +127,9 @@ export async function getQaContext(): Promise<string> {
 const LP_EMOJI: Record<string, string> = { LP01: '🔵', LP02: '🟡', 'Sem LP': '⚪' };
 
 function money(v: number | null): string {
-  return v == null ? 'n/d' : `R$ ${v.toFixed(2)}`;
+  return v == null
+    ? 'n/d'
+    : `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export async function buildScheduledReport(): Promise<string> {
@@ -175,6 +177,20 @@ export async function buildScheduledReport(): Promise<string> {
   const q = s.quest;
   const custoAB = hasAd && q.qualificados > 0 ? totalSpend / q.qualificados : null;
 
+  // Budget tracking
+  const budgetTotal = Number(process.env.REPORT_BUDGET_TOTAL ?? 0) || null;
+  const pctGasto = budgetTotal && hasAd ? (totalSpend / budgetTotal) * 100 : null;
+  const falta = budgetTotal && hasAd ? budgetTotal - totalSpend : null;
+  const pctFalta = pctGasto != null ? Math.max(0, 100 - pctGasto) : null;
+  const lpSpendLine = realLps
+    .map((x) => `${LP_EMOJI[x.nome] ?? '⚫'} ${x.nome}: ${money(ad[x.nome]?.spend ?? null)}`)
+    .join(' · ');
+  const orcamentoLinha = budgetTotal
+    ? `Total: ${money(budgetTotal)}\nGasto: ${money(hasAd ? totalSpend : null)}${
+        pctGasto != null ? ` (${pctGasto.toFixed(1)}%)` : ''
+      } · Falta: ${money(falta)}${pctFalta != null ? ` (${pctFalta.toFixed(1)}%)` : ''}`
+    : `Gasto: ${money(hasAd ? totalSpend : null)}`;
+
   // Rule-based action
   let acao: string;
   if (s.semLpPct >= 30) {
@@ -196,7 +212,14 @@ export async function buildScheduledReport(): Promise<string> {
     ``,
     `👥 Total: ${s.capt.total} · 🆕 no bloco: +${s.capt.janela}`,
     ``,
-    `💰 Investido: ${money(hasAd ? totalSpend : null)} · CPL: ${money(cplGeral)}`,
+    `💰 CPL geral: ${money(cplGeral)}`,
+    ``,
+    sep,
+    ``,
+    `💸 Orçamento`,
+    ``,
+    orcamentoLinha,
+    ...(lpSpendLine ? ['', lpSpendLine] : []),
     ``,
     sep,
     ``,
