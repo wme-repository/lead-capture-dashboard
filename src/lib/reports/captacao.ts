@@ -143,7 +143,7 @@ export async function getQaContext(): Promise<string> {
     ``,
     `CONTEXTO DO LANÇAMENTO:`,
     `- Projeto TRT: captação para o lançamento (aulas ao vivo de 6 a 9 de julho de 2026).`,
-    `- 2 landing pages: LP01 (trt.oesquadraodeelite.com.br) e LP02 (lp.oesquadraodeelite.com.br).`,
+    `- 2 landing pages (URLs exatas): LP01 = https://trt.oesquadraodeelite.com.br | LP02 = https://lp.oesquadraodeelite.com.br/projetotrt`,
     `- Fluxo do lead: preenche a LP (nome/email/telefone) e depois responde o questionário (11 perguntas) que gera o LeadScore e a faixa (A, B, C ou D). Qualificados = faixa A+B.`,
     `- Campanhas Meta rodam de 21/06 a 06/07/2026, orçamento de R$ 6.300/dia.`,
     `- Destinos de cada lead: Google Sheets, CRM DataCrazy (dispara WhatsApp) e banco Supabase.`,
