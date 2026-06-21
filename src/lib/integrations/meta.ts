@@ -72,28 +72,33 @@ async function fetchAllPaged<T>(firstUrl: string): Promise<T[]> {
 export async function getConjuntoPacing(): Promise<ConjuntoPacing[]> {
   if (!TOKEN || !ACCT) return [];
 
-  type AdSet = { name?: string; daily_budget?: string; campaign?: { name?: string } };
-  type Insight = { adset_name?: string; spend?: string };
+  type AdSet = { id?: string; name?: string; daily_budget?: string; campaign?: { name?: string } };
+  type Insight = { adset_id?: string; spend?: string };
 
   const [adsets, insights] = await Promise.all([
     fetchAllPaged<AdSet>(
-      `${GRAPH}/${ACCT}/adsets?fields=name,daily_budget,campaign{name}&limit=500&access_token=${TOKEN}`,
+      `${GRAPH}/${ACCT}/adsets?fields=id,name,daily_budget,campaign{name}&limit=500&access_token=${TOKEN}`,
     ),
     fetchAllPaged<Insight>(
-      `${GRAPH}/${ACCT}/insights?level=adset&fields=adset_name,spend&date_preset=maximum&limit=500&access_token=${TOKEN}`,
+      `${GRAPH}/${ACCT}/insights?level=adset&fields=adset_id,spend&date_preset=maximum&limit=500&access_token=${TOKEN}`,
     ).catch(() => [] as Insight[]),
   ]);
 
+  // Only PROJETOTRT2 ad sets: map adset_id → conjunto name (avoids same-named ad
+  // sets from other/old campaigns polluting the spend).
+  const idToConjunto = new Map<string, string>();
   const map = new Map<string, ConjuntoPacing>();
   for (const a of adsets) {
     if (!(a.campaign?.name ?? '').toUpperCase().includes(TAG)) continue;
     const nome = (a.name ?? '').trim();
+    if (a.id) idToConjunto.set(a.id, nome);
     const e = map.get(nome) ?? { conjunto: nome, budgetDia: 0, gastoTotal: 0 };
     e.budgetDia += a.daily_budget ? parseInt(a.daily_budget, 10) / 100 : 0;
     map.set(nome, e);
   }
   for (const ins of insights) {
-    const nome = (ins.adset_name ?? '').trim();
+    const nome = ins.adset_id ? idToConjunto.get(ins.adset_id) : undefined;
+    if (!nome) continue;
     const e = map.get(nome);
     if (e) e.gastoTotal += parseFloat(ins.spend ?? '0') || 0;
   }
