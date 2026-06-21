@@ -127,7 +127,6 @@ export async function POST(
     return json({ error: "Invalid body" }, 400);
   }
   console.log(`[webhook] body keys: ${Object.keys(body).join(",")}`);
-  console.log(`[webhook] FULL BODY (${slug}): ${JSON.stringify(body)}`);
 
   // 4. Normalize (standard only) then validate against schema for this source
   const schema =
