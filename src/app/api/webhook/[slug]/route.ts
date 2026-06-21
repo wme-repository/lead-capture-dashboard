@@ -263,12 +263,23 @@ export async function POST(
         console.error("[webhook] block report error:", err);
       }
 
-      // 9. Mirror email into the shared dedup registry (keeps n8n standby in sync)
+      // 9. Mirror lead into the shared dedup/backup registry (keeps n8n standby in sync)
       if (email) {
         try {
+          const d = leadData as {
+            name?: string | null; phone?: string | null; paginaCaptura?: string | null;
+            pesquisa?: string | null; grupo?: string | null;
+            utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null;
+            utmTerm?: string | null; utmContent?: string | null; lp?: string | null;
+          };
           await prisma.$executeRaw`
-            INSERT INTO emails_captados_trt_julho (email, nome, telefone)
-            VALUES (${email}, ${leadData.name ?? ""}, ${leadData.phone ?? ""})
+            INSERT INTO emails_captados_trt_julho
+              (email, nome, telefone, "paginaCaptura", pesquisa, grupo,
+               "utmSource", "utmMedium", "utmCampaign", "utmTerm", "utmContent", lp)
+            VALUES (${email}, ${d.name ?? ""}, ${d.phone ?? ""}, ${d.paginaCaptura ?? null},
+               ${d.pesquisa ?? null}, ${d.grupo ?? null}, ${d.utmSource ?? null},
+               ${d.utmMedium ?? null}, ${d.utmCampaign ?? null}, ${d.utmTerm ?? null},
+               ${d.utmContent ?? null}, ${d.lp ?? null})
             ON CONFLICT (email) DO NOTHING`;
         } catch (err) {
           console.error("[webhook] registry mirror error:", err);
