@@ -262,6 +262,18 @@ export async function POST(
       } catch (err) {
         console.error("[webhook] block report error:", err);
       }
+
+      // 9. Mirror email into the shared dedup registry (keeps n8n standby in sync)
+      if (email) {
+        try {
+          await prisma.$executeRaw`
+            INSERT INTO emails_captados_trt_julho (email, nome, telefone)
+            VALUES (${email}, ${leadData.name ?? ""}, ${leadData.phone ?? ""})
+            ON CONFLICT (email) DO NOTHING`;
+        } catch (err) {
+          console.error("[webhook] registry mirror error:", err);
+        }
+      }
     }
   });
 
