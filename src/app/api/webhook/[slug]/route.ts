@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { triggerIntegrations } from "@/lib/integrations/trigger";
@@ -234,32 +234,36 @@ export async function POST(
     return newLead;
   });
 
-  // 7. Trigger integrations (non-fatal — retry cron will pick up failures)
-  try {
-    const leadWithRelations = await prisma.lead.findUniqueOrThrow({
-      where: { id: lead.id },
-      include: { source: true, syncLogs: true },
-    });
-    await triggerIntegrations(leadWithRelations);
-  } catch (err) {
-    console.error("[webhook] triggerIntegrations error:", err);
-  }
-
-  // 8. Block report on captação milestone (non-fatal)
-  if (source.schemaType === "standard") {
+  // Respond immediately; run sync + milestone AFTER the response so slow
+  // destinations (Sheets/DataCrazy) never make the LP's webhook time out.
+  after(async () => {
+    // 7. Trigger integrations (non-fatal — retry cron will pick up failures)
     try {
-      const every = Number(process.env.MILESTONE_EVERY ?? 100);
-      if (every > 0) {
-        const total = await prisma.lead.count({ where: { schemaType: "standard" } });
-        if (total > 0 && total % every === 0) {
-          const report = await buildBlockReport();
-          await sendWhatsAppText(report);
-        }
-      }
+      const leadWithRelations = await prisma.lead.findUniqueOrThrow({
+        where: { id: lead.id },
+        include: { source: true, syncLogs: true },
+      });
+      await triggerIntegrations(leadWithRelations);
     } catch (err) {
-      console.error("[webhook] block report error:", err);
+      console.error("[webhook] triggerIntegrations error:", err);
     }
-  }
+
+    // 8. Block report on captação milestone (non-fatal)
+    if (source.schemaType === "standard") {
+      try {
+        const every = Number(process.env.MILESTONE_EVERY ?? 100);
+        if (every > 0) {
+          const total = await prisma.lead.count({ where: { schemaType: "standard" } });
+          if (total > 0 && total % every === 0) {
+            const report = await buildBlockReport();
+            await sendWhatsAppText(report);
+          }
+        }
+      } catch (err) {
+        console.error("[webhook] block report error:", err);
+      }
+    }
+  });
 
   return json({ id: lead.id }, 200);
 }
