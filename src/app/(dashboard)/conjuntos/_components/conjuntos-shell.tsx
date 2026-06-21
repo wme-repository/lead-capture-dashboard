@@ -92,7 +92,7 @@ export default function ConjuntosShell({ campanhas }: { campanhas: Campanha[] })
         {[
           { label: "Orçamento/dia", value: money(tot.budgetDia) },
           { label: "Gasto total", value: money(tot.gasto) },
-          { label: "Leads (Meta)", value: tot.leads.toLocaleString("pt-BR") },
+          { label: "Leads (por UTM)", value: tot.leads.toLocaleString("pt-BR") },
           { label: "CPL geral", value: money(tot.cpl) },
         ].map((k) => (
           <div key={k.label} className="rounded-xl border border-gray-200 bg-white p-4">
