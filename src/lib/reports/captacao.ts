@@ -211,7 +211,7 @@ export async function getQaContext(): Promise<string> {
     ``,
     `RECURSOS / FERRAMENTAS DISPONÍVEIS (quando pedirem para "listar planilhas, CRM e workflows"):`,
     `- Planilhas Google Sheets: Captação → ${sheetUrl('lead')} | Questionário/Leadscore → ${sheetUrl('quest')}`,
-    `- CRM: DataCrazy (api.datacrazy.io) — pipeline "CAPTAÇÃO - PROJETO TRT 06/2026". Recebe cada lead de captação e dispara o fluxo de WhatsApp (boas-vindas + link do grupo).`,
+    `- CRM: DataCrazy (api.datacrazy.io) — pipeline "CAPTAÇÃO - PROJETO TRT 07/2026" (estágios: Inscrito, bloquear, Alunos Compraram) e automação "Captação - Projeto TRT : 06/2026 v.3". Cada lead de captação entra no estágio Inscrito e dispara o fluxo de WhatsApp (boas-vindas + link do grupo).`,
     `- Banco de dados: Supabase (PostgreSQL) — tabelas Lead, SyncLog, Source + registro de dedup emails_captados_trt_julho.`,
     `- Dashboard principal: leads.esqtools.com (este sistema, que recebe os webhooks e gera os relatórios).`,
     `- Workflows no n8n (backup/standby, hoje inativos): 1) Captação LP01, 2) Captação LP02, 3) Questionário. Detalhes na seção SISTEMA DE BACKUP abaixo.`,
