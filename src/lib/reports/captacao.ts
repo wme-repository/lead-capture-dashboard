@@ -107,7 +107,16 @@ export async function getScheduledSnapshot(): Promise<ScheduledSnapshot> {
 
 // Plain-text data snapshot for the Q&A assistant context.
 export async function getQaContext(): Promise<string> {
-  const s = await getScheduledSnapshot();
+  const [s, sources] = await Promise.all([
+    getScheduledSnapshot(),
+    prisma.source.findMany({ select: { slug: true, sheetsId: true } }),
+  ]);
+
+  const sheetUrl = (slug: string) => {
+    const id = sources.find((x) => x.slug === slug)?.sheetsId;
+    return id ? `https://docs.google.com/spreadsheets/d/${id}/edit` : '(não configurada)';
+  };
+
   return [
     `DADOS ATUAIS DA CAPTAÇÃO (Projeto TRT) — ${s.data} ${s.hora}`,
     ``,
@@ -121,6 +130,10 @@ export async function getQaContext(): Promise<string> {
     `- Qualificados A+B: ${s.quest.qualificados} (${s.quest.qualPct}% dos respondentes)`,
     `- Score médio: ${s.quest.scoreMedio}`,
     `- Faixas: A=${s.faixas.A}, B=${s.faixas.B}, C=${s.faixas.C}, D=${s.faixas.D}`,
+    ``,
+    `Links das planilhas (Google Sheets):`,
+    `- Planilha de Captação: ${sheetUrl('lead')}`,
+    `- Planilha do Questionário: ${sheetUrl('quest')}`,
   ].join('\n');
 }
 
