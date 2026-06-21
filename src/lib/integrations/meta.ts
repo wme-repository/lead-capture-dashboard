@@ -131,6 +131,97 @@ export async function getCampaignList(): Promise<MetaCampaign[]> {
     }));
 }
 
+export interface ConjuntoRow {
+  conjunto: string;
+  status: string;
+  budgetDia: number;
+  gasto: number;
+  leads: number;
+  cpl: number | null;
+}
+export interface CampanhaBreakdown {
+  campanha: string;
+  lp: string | null;
+  budgetDia: number;
+  gasto: number;
+  leads: number;
+  cpl: number | null;
+  conjuntos: ConjuntoRow[];
+}
+
+function leadCountFromActions(actions?: { action_type: string; value: string }[]): number {
+  if (!actions) return 0;
+  // Prefer the grouped lead conversion; fall back to generic "lead".
+  const grouped = actions.find((a) => a.action_type === 'onsite_conversion.lead_grouped');
+  if (grouped) return parseFloat(grouped.value) || 0;
+  const lead = actions.find((a) => a.action_type === 'lead' || a.action_type === 'leadgen_grouped');
+  return lead ? parseFloat(lead.value) || 0 : 0;
+}
+
+// Campanhas [PROJETOTRT2] com seus conjuntos: orçamento/dia, gasto e CPL.
+export async function getMetaConjuntos(): Promise<CampanhaBreakdown[]> {
+  if (!TOKEN || !ACCT) return [];
+
+  type Camp = { id?: string; name?: string };
+  type AdSet = { id?: string; name?: string; daily_budget?: string; effective_status?: string; campaign?: { id?: string } };
+  type Insight = { adset_id?: string; spend?: string; actions?: { action_type: string; value: string }[] };
+
+  const [campaigns, adsets, insights] = await Promise.all([
+    fetchAllPaged<Camp>(`${GRAPH}/${ACCT}/campaigns?fields=id,name&limit=500&access_token=${TOKEN}`),
+    fetchAllPaged<AdSet>(
+      `${GRAPH}/${ACCT}/adsets?fields=id,name,daily_budget,effective_status,campaign{id}&limit=500&access_token=${TOKEN}`,
+    ),
+    fetchAllPaged<Insight>(
+      `${GRAPH}/${ACCT}/insights?level=adset&fields=adset_id,spend,actions&date_preset=maximum&limit=500&access_token=${TOKEN}`,
+    ).catch(() => [] as Insight[]),
+  ]);
+
+  const trtCampaigns = campaigns.filter((c) => (c.name ?? '').toUpperCase().includes(TAG));
+  const campById = new Map(trtCampaigns.map((c) => [c.id ?? '', c.name ?? '']));
+  const lpOf = (name: string) => {
+    const u = name.toUpperCase();
+    return u.includes('LP01') ? 'LP01' : u.includes('LP02') ? 'LP02' : null;
+  };
+  const spendByAdset = new Map<string, { gasto: number; leads: number }>();
+  for (const ins of insights) {
+    if (!ins.adset_id) continue;
+    spendByAdset.set(ins.adset_id, {
+      gasto: parseFloat(ins.spend ?? '0') || 0,
+      leads: leadCountFromActions(ins.actions),
+    });
+  }
+
+  const byCampaign = new Map<string, CampanhaBreakdown>();
+  for (const a of adsets) {
+    const campId = a.campaign?.id ?? '';
+    const campName = campById.get(campId);
+    if (!campName) continue;
+    const c =
+      byCampaign.get(campId) ??
+      ({ campanha: campName, lp: lpOf(campName), budgetDia: 0, gasto: 0, leads: 0, cpl: null, conjuntos: [] } as CampanhaBreakdown);
+    const sp = spendByAdset.get(a.id ?? '') ?? { gasto: 0, leads: 0 };
+    const budget = a.daily_budget ? parseInt(a.daily_budget, 10) / 100 : 0;
+    c.conjuntos.push({
+      conjunto: a.name ?? '',
+      status: a.effective_status ?? '',
+      budgetDia: budget,
+      gasto: sp.gasto,
+      leads: sp.leads,
+      cpl: sp.leads > 0 ? sp.gasto / sp.leads : null,
+    });
+    c.budgetDia += budget;
+    c.gasto += sp.gasto;
+    c.leads += sp.leads;
+    byCampaign.set(campId, c);
+  }
+  for (const c of byCampaign.values()) {
+    c.cpl = c.leads > 0 ? c.gasto / c.leads : null;
+    c.conjuntos.sort((a, b) => b.budgetDia - a.budgetDia);
+  }
+
+  return [...byCampaign.values()].sort((a, b) => a.campanha.localeCompare(b.campanha));
+}
+
 // Returns per-LP ad metrics, or {} if Meta is not configured / fails.
 export async function getAdMetricsByLp(): Promise<Record<string, LpAdMetrics>> {
   if (!TOKEN || !ACCT) return {};
