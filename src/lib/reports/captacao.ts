@@ -172,6 +172,7 @@ export async function getQaContext(): Promise<string> {
     ...(campaigns.length
       ? campaigns.map((c) => `- [${c.status}] ${c.name}`)
       : ['- (nenhuma campanha encontrada ainda)']),
+    `IMPORTANTE: status "ACTIVE" no Meta NÃO significa que já estão entregando. As campanhas estão PROGRAMADAS para começar a rodar a partir das 00:00 de 21/06/2026. Enquanto não houver gasto/impressões (investido = n/d), elas ainda não começaram de fato — não diga que estão entregando só pelo status.`,
     ``,
     `Links das planilhas (Google Sheets):`,
     `- Planilha de Captação: ${sheetUrl('lead')}`,
