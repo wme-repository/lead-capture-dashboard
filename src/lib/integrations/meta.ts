@@ -133,6 +133,7 @@ export async function getCampaignList(): Promise<MetaCampaign[]> {
 
 export interface ConjuntoRow {
   conjunto: string;
+  campNum: string; // número da campanha (início do nome, ex: "01")
   status: string;
   budgetDia: number;
   gasto: number;
@@ -206,8 +207,10 @@ export async function getMetaConjuntos(): Promise<CampanhaBreakdown[]> {
       ({ campanha: campName, lp: lpOf(campName), temperatura: tempOf(campName), budgetDia: 0, gasto: 0, leads: 0, cpl: null, conjuntos: [] } as CampanhaBreakdown);
     const sp = spendByAdset.get(a.id ?? '') ?? { gasto: 0, leads: 0 };
     const budget = a.daily_budget ? parseInt(a.daily_budget, 10) / 100 : 0;
+    const campNum = (campName.match(/^\s*(\d+)/)?.[1]) ?? '';
     c.conjuntos.push({
       conjunto: a.name ?? '',
+      campNum,
       status: a.effective_status ?? '',
       budgetDia: budget,
       gasto: sp.gasto,

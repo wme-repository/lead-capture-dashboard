@@ -6,6 +6,7 @@ import { useState } from "react";
 
 type ConjuntoRow = {
   conjunto: string;
+  campNum: string;
   status: string;
   budgetDia: number;
   gasto: number;
@@ -175,6 +176,7 @@ export default function ConjuntosShell({ campanhas }: { campanhas: Campanha[] })
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100 text-left text-xs text-gray-500">
+                        <th className="px-4 py-2 font-medium">Camp.</th>
                         <th className="px-4 py-2 font-medium">Conjunto</th>
                         <th className="px-4 py-2 font-medium">Status</th>
                         <th className="px-4 py-2 text-right font-medium">Orçamento/dia</th>
@@ -186,6 +188,13 @@ export default function ConjuntosShell({ campanhas }: { campanhas: Campanha[] })
                     <tbody>
                       {rows.map((j, i) => (
                         <tr key={i} className="border-b border-gray-50 last:border-0">
+                          <td className="px-4 py-2">
+                            {j.campNum ? (
+                              <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">#{j.campNum}</span>
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-2 text-gray-800">{j.conjunto}</td>
                           <td className="px-4 py-2">
                             <span className={`rounded px-1.5 py-0.5 text-[11px] ${j.status === "ACTIVE" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
