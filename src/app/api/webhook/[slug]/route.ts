@@ -280,10 +280,31 @@ export async function POST(
                ${d.pesquisa ?? null}, ${d.grupo ?? null}, ${d.utmSource ?? null},
                ${d.utmMedium ?? null}, ${d.utmCampaign ?? null}, ${d.utmTerm ?? null},
                ${d.utmContent ?? null}, ${d.lp ?? null})
-            ON CONFLICT (email) DO NOTHING`;
+            ON CONFLICT (email) DO UPDATE SET
+              nome = EXCLUDED.nome, telefone = EXCLUDED.telefone,
+              "paginaCaptura" = EXCLUDED."paginaCaptura", pesquisa = EXCLUDED.pesquisa,
+              grupo = EXCLUDED.grupo, "utmSource" = EXCLUDED."utmSource",
+              "utmMedium" = EXCLUDED."utmMedium", "utmCampaign" = EXCLUDED."utmCampaign",
+              "utmTerm" = EXCLUDED."utmTerm", "utmContent" = EXCLUDED."utmContent",
+              lp = EXCLUDED.lp`;
         } catch (err) {
           console.error("[webhook] registry mirror error:", err);
         }
+      }
+    }
+
+    // 10. Questionnaire → set score/grade on the unique-email registry (by email).
+    // Order-independent: if the captação row exists, updates it; otherwise creates a
+    // partial row that the captação mirror later completes.
+    if (source.schemaType === "questionnaire" && email) {
+      try {
+        const qd = data as { name?: string; phone?: string; score: number; grade: string };
+        await prisma.$executeRaw`
+          INSERT INTO emails_captados_trt_julho (email, nome, telefone, score, grade)
+          VALUES (${email}, ${qd.name ?? ""}, ${qd.phone ?? ""}, ${qd.score}, ${qd.grade})
+          ON CONFLICT (email) DO UPDATE SET score = EXCLUDED.score, grade = EXCLUDED.grade`;
+      } catch (err) {
+        console.error("[webhook] registry score update error:", err);
       }
     }
   });
