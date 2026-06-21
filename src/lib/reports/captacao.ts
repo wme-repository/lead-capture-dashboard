@@ -177,6 +177,14 @@ export async function getQaContext(): Promise<string> {
     `Links das planilhas (Google Sheets):`,
     `- Planilha de Captação: ${sheetUrl('lead')}`,
     `- Planilha do Questionário: ${sheetUrl('quest')}`,
+    ``,
+    `SISTEMA DE BACKUP (standby no n8n):`,
+    `- Existem 3 workflows de backup no n8n (n8n-hz.esqtools.com), hoje INATIVOS. Servem para acionar manualmente caso o app principal (a dashboard) caia.`,
+    `- São: Captação LP01, Captação LP02 e Questionário. Webhooks: /webhook/standby-captacao-lp01, /webhook/standby-captacao-lp02, /webhook/standby-questionario.`,
+    `- O standby grava nos mesmos Google Sheets e envia para o CRM DataCrazy (não grava na tabela Lead do Supabase, pois durante um apagão a dashboard estaria fora).`,
+    `- Tem deduplicação por email (só captação), compartilhada com o app via a tabela emails_captados_trt_julho no Supabase — app e standby não duplicam leads entre si.`,
+    `- A escrita nas planilhas é atômica (append direto na API do Google), à prova de concorrência.`,
+    `- Para acionar em emergência: ativar os 3 workflows no n8n e apontar as LPs/quiz para as URLs de webhook acima.`,
   ].join('\n');
 }
 
