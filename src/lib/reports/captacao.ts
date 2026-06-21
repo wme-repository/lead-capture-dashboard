@@ -120,6 +120,16 @@ export async function getQaContext(): Promise<string> {
     }),
   ]);
 
+  // Cruza o score/faixa (questionário) com os últimos leads de captação por email
+  const emails = ultimosLeads.map((l) => (l.email ?? '').toLowerCase()).filter(Boolean);
+  const quizzes = emails.length
+    ? await prisma.lead.findMany({
+        where: { schemaType: 'questionnaire', email: { in: emails, mode: 'insensitive' } },
+        select: { email: true, score: true, grade: true },
+      })
+    : [];
+  const scoreByEmail = new Map(quizzes.map((q) => [(q.email ?? '').toLowerCase(), q]));
+
   const hora = (d: Date) =>
     new Date(d).toLocaleTimeString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
@@ -127,10 +137,13 @@ export async function getQaContext(): Promise<string> {
       minute: '2-digit',
     });
   const ultimosLinhas = ultimosLeads.length
-    ? ultimosLeads.map(
-        (l, i) =>
-          `- ${i === 0 ? '(MAIS RECENTE) ' : ''}${l.name ?? '(sem nome)'} · ${l.lp ?? 'Sem LP'} · ${l.email ?? ''} · ${hora(l.receivedAt)}`,
-      )
+    ? ultimosLeads.map((l, i) => {
+        const q = scoreByEmail.get((l.email ?? '').toLowerCase());
+        const scorePart = q
+          ? ` · score ${q.score ?? '?'} (faixa ${q.grade ?? '?'})`
+          : ' · questionário ainda não respondido';
+        return `- ${i === 0 ? '(MAIS RECENTE) ' : ''}${l.name ?? '(sem nome)'} · ${l.lp ?? 'Sem LP'} · ${l.email ?? ''} · ${hora(l.receivedAt)}${scorePart}`;
+      })
     : ['- (nenhum lead capturado ainda)'];
 
   const sheetUrl = (slug: string) => {
