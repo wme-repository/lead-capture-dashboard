@@ -178,7 +178,7 @@ export async function getQaContext(): Promise<string> {
     `- Projeto TRT: captação para o lançamento (aulas ao vivo de 6 a 9 de julho de 2026).`,
     `- 2 landing pages (URLs exatas): LP01 = https://trt.oesquadraodeelite.com.br | LP02 = https://lp.oesquadraodeelite.com.br/projetotrt`,
     `- Fluxo do lead: preenche a LP (nome/email/telefone) e depois responde o questionário (11 perguntas) que gera o LeadScore e a faixa (A, B, C ou D). Qualificados = faixa A+B.`,
-    `- Campanhas Meta rodam de 21/06 a 06/07/2026, orçamento de R$ 6.300/dia.`,
+    `- Campanhas Meta rodam de 21/06 a 06/07/2026. Orçamento: R$ 6.000/dia, teto total de R$ 250.000. Meta de captação: 30.000 leads (atual: ${s.capt.total}, ${pct(s.capt.total, Number(process.env.LEADS_GOAL ?? 30000))}% da meta).`,
     `- Destinos de cada lead: Google Sheets, CRM DataCrazy (dispara WhatsApp) e banco Supabase.`,
     ``,
     `Captação (LEAD/UTM):`,
@@ -279,7 +279,8 @@ export async function buildScheduledReport(): Promise<string> {
   const q = s.quest;
   const custoAB = hasAd && q.qualificados > 0 ? totalSpend / q.qualificados : null;
 
-  // Budget tracking
+  // Budget + goal tracking
+  const leadsGoal = Number(process.env.LEADS_GOAL ?? 30000) || 30000;
   const budgetTotal = Number(process.env.REPORT_BUDGET_TOTAL ?? 0) || null;
   const pctGasto = budgetTotal && hasAd ? (totalSpend / budgetTotal) * 100 : null;
   const falta = budgetTotal && hasAd ? budgetTotal - totalSpend : null;
@@ -313,6 +314,8 @@ export async function buildScheduledReport(): Promise<string> {
     `🎯 Leads · LEAD/UTM`,
     ``,
     `👥 Total: ${s.capt.total} · 🆕 no bloco: +${s.capt.janela}`,
+    ``,
+    `🎯 Meta: ${s.capt.total} / ${leadsGoal.toLocaleString('pt-BR')} (${pct(s.capt.total, leadsGoal)}%)`,
     ``,
     `💰 CPL geral: ${money(cplGeral)}`,
     ``,
