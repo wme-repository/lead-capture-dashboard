@@ -20,6 +20,6 @@ export const config = {
      * - /_next/* (Next.js internals)
      * - /favicon.ico, /public files
      */
-    "/((?!api/auth|api/webhook|api/whatsapp|api/cron|login|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/auth|api/webhook|api/whatsapp|api/cron|api/health|login|_next/static|_next/image|favicon.ico).*)",
   ],
 };
