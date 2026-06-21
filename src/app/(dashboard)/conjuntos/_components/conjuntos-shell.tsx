@@ -18,7 +18,7 @@ type Campanha = {
   temperatura: string | null;
   conjuntos: ConjuntoRow[];
 };
-type Row = ConjuntoRow & { campanha: string };
+type Row = ConjuntoRow & { campanha: string; _lp: string | null; _temp: string | null };
 
 function money(v: number | null): string {
   return v == null
@@ -26,8 +26,8 @@ function money(v: number | null): string {
     : `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-const TEMPS = ["QUENTE", "FRIO", "Outros"] as const;
 const LPS = ["LP01", "LP02", "Sem LP"] as const;
+const TEMPS = ["QUENTE", "FRIO", "Outros"] as const;
 const LP_BADGE: Record<string, string> = {
   LP01: "bg-blue-50 text-blue-700",
   LP02: "bg-amber-50 text-amber-700",
@@ -40,21 +40,27 @@ function subtotal(rows: Row[]) {
   return { budgetDia, gasto, leads, cpl: leads > 0 ? gasto / leads : null };
 }
 
+function TempIcon({ t }: { t: string }) {
+  if (t === "QUENTE") return <Flame size={14} className="text-orange-500" />;
+  if (t === "FRIO") return <Snowflake size={14} className="text-sky-500" />;
+  return null;
+}
+
 export default function ConjuntosShell({ campanhas }: { campanhas: Campanha[] }) {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Flatten conjuntos and group by temperatura → LP
+  // Flatten conjuntos, then group by LP → temperatura
   const all: Row[] = campanhas.flatMap((c) =>
-    c.conjuntos.map((j) => ({ ...j, campanha: c.campanha, _temp: c.temperatura, _lp: c.lp } as Row & { _temp: string | null; _lp: string | null }))
-  ) as Row[];
+    c.conjuntos.map((j) => ({ ...j, campanha: c.campanha, _lp: c.lp, _temp: c.temperatura }))
+  );
 
   const grouped: Record<string, Record<string, Row[]>> = {};
-  for (const r of all as (Row & { _temp: string | null; _lp: string | null })[]) {
-    const t = r._temp ?? "Outros";
+  for (const r of all) {
     const lp = r._lp ?? "Sem LP";
-    (grouped[t] ??= {});
-    (grouped[t][lp] ??= []).push(r);
+    const t = r._temp ?? "Outros";
+    (grouped[lp] ??= {});
+    (grouped[lp][t] ??= []).push(r);
   }
 
   const tot = subtotal(all);
@@ -67,7 +73,7 @@ export default function ConjuntosShell({ campanhas }: { campanhas: Campanha[] })
             <Megaphone size={20} /> Conjuntos (Meta Ads)
           </h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Orçamento, gasto e CPL por conjunto — agrupado por público (QUENTE/FRIO) e LP. Campanhas [PROJETOTRT2].
+            Orçamento, gasto e CPL por conjunto — agrupado por LP e público (QUENTE/FRIO). Campanhas [PROJETOTRT2].
           </p>
         </div>
         <button
@@ -96,34 +102,70 @@ export default function ConjuntosShell({ campanhas }: { campanhas: Campanha[] })
         ))}
       </div>
 
+      {/* Resumo consolidado por LP e por público */}
+      {all.length > 0 && (
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-2 text-xs font-medium text-gray-500">Por LP</div>
+            <div className="space-y-1.5">
+              {(["LP01", "LP02"] as const).map((lp) => {
+                const rows = all.filter((r) => r._lp === lp);
+                if (!rows.length) return null;
+                const s = subtotal(rows);
+                return (
+                  <div key={lp} className="flex items-center justify-between text-sm">
+                    <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${LP_BADGE[lp]}`}>{lp}</span>
+                    <span className="text-gray-600">{money(s.budgetDia)}/dia · gasto {money(s.gasto)} · CPL {money(s.cpl)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-2 text-xs font-medium text-gray-500">Por público</div>
+            <div className="space-y-1.5">
+              {(["QUENTE", "FRIO"] as const).map((t) => {
+                const rows = all.filter((r) => (r._temp ?? "Outros") === t);
+                if (!rows.length) return null;
+                const s = subtotal(rows);
+                return (
+                  <div key={t} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1.5 text-gray-700"><TempIcon t={t} />{t}</span>
+                    <span className="text-gray-600">{money(s.budgetDia)}/dia · gasto {money(s.gasto)} · CPL {money(s.cpl)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {all.length === 0 && (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
           Nenhuma campanha [PROJETOTRT2] encontrada (ou Meta indisponível).
         </div>
       )}
 
-      {TEMPS.filter((t) => grouped[t]).map((t) => {
-        const tempRows = Object.values(grouped[t]).flat();
-        const st = subtotal(tempRows);
+      {/* LP → QUENTE/FRIO → conjuntos */}
+      {LPS.filter((lp) => grouped[lp]).map((lp) => {
+        const lpRows = Object.values(grouped[lp]).flat();
+        const sl = subtotal(lpRows);
         return (
-          <div key={t} className="space-y-3">
+          <div key={lp} className="space-y-3">
             <div className="flex items-center gap-2 pt-1">
-              {t === "QUENTE" ? <Flame size={18} className="text-orange-500" /> : t === "FRIO" ? <Snowflake size={18} className="text-sky-500" /> : null}
-              <h2 className="text-base font-semibold text-gray-900">{t}</h2>
+              <span className={`rounded px-2 py-0.5 text-xs font-semibold ${LP_BADGE[lp] ?? "bg-gray-100 text-gray-600"}`}>{lp}</span>
               <span className="text-xs text-gray-500">
-                · {money(st.budgetDia)}/dia · gasto {money(st.gasto)} · CPL {money(st.cpl)}
+                · {money(sl.budgetDia)}/dia · gasto {money(sl.gasto)} · CPL {money(sl.cpl)}
               </span>
             </div>
 
-            {LPS.filter((lp) => grouped[t][lp]).map((lp) => {
-              const rows = grouped[t][lp];
+            {TEMPS.filter((t) => grouped[lp][t]).map((t) => {
+              const rows = grouped[lp][t];
               const s = subtotal(rows);
               return (
-                <div key={lp} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <div key={t} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50/60 px-4 py-2.5">
-                    <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${LP_BADGE[lp] ?? "bg-gray-100 text-gray-600"}`}>
-                      {lp}
-                    </span>
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800"><TempIcon t={t} />{t}</span>
                     <div className="flex gap-4 text-xs text-gray-600">
                       <span>Orçamento: <b className="text-gray-900">{money(s.budgetDia)}/dia</b></span>
                       <span>Gasto: <b className="text-gray-900">{money(s.gasto)}</b></span>
