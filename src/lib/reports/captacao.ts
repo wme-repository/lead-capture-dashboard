@@ -107,12 +107,31 @@ export async function getScheduledSnapshot(): Promise<ScheduledSnapshot> {
 
 // Plain-text data snapshot for the Q&A assistant context.
 export async function getQaContext(): Promise<string> {
-  const [s, sources, ad, campaigns] = await Promise.all([
+  const [s, sources, ad, campaigns, ultimosLeads] = await Promise.all([
     getScheduledSnapshot(),
     prisma.source.findMany({ select: { slug: true, sheetsId: true } }),
     getAdMetricsByLp().catch((): Record<string, LpAdMetrics> => ({})),
     getCampaignList().catch((): MetaCampaign[] => []),
+    prisma.lead.findMany({
+      where: { schemaType: 'standard' },
+      orderBy: { receivedAt: 'desc' },
+      take: 5,
+      select: { name: true, email: true, lp: true, receivedAt: true },
+    }),
   ]);
+
+  const hora = (d: Date) =>
+    new Date(d).toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  const ultimosLinhas = ultimosLeads.length
+    ? ultimosLeads.map(
+        (l, i) =>
+          `- ${i === 0 ? '(MAIS RECENTE) ' : ''}${l.name ?? '(sem nome)'} · ${l.lp ?? 'Sem LP'} · ${l.email ?? ''} · ${hora(l.receivedAt)}`,
+      )
+    : ['- (nenhum lead capturado ainda)'];
 
   const sheetUrl = (slug: string) => {
     const id = sources.find((x) => x.slug === slug)?.sheetsId;
@@ -153,6 +172,9 @@ export async function getQaContext(): Promise<string> {
     `- Total de leads: ${s.capt.total}`,
     `- Hoje: ${s.capt.hoje} | Ontem: ${s.capt.ontem} | Nesta janela: ${s.capt.janela}`,
     `- Distribuição por LP: ${s.lp.map((x) => `${x.nome}=${x.count} (${x.pct}%)`).join(', ')}`,
+    ``,
+    `Últimos leads de captação (do mais recente para o mais antigo):`,
+    ...ultimosLinhas,
     ``,
     `Questionário:`,
     `- Respostas: ${s.quest.respostas} (taxa de resposta ${s.quest.respPct}%)`,
