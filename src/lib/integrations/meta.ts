@@ -40,6 +40,37 @@ function lpFromName(name: string): string | null {
   return null;
 }
 
+export interface MetaCampaign {
+  name: string;
+  status: string;
+  lp: string | null;
+}
+
+// Lista de campanhas [PROJETOTRT2] (nome + status + LP), ou [] se não configurado/falha.
+export async function getCampaignList(): Promise<MetaCampaign[]> {
+  if (!TOKEN || !ACCT) return [];
+
+  const url = new URL(`${GRAPH}/${ACCT}/campaigns`);
+  url.searchParams.set('fields', 'name,effective_status');
+  url.searchParams.set('limit', '500');
+  url.searchParams.set('access_token', TOKEN);
+
+  const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Meta campaigns ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  const data = (await res.json()) as { data?: { name?: string; effective_status?: string }[] };
+  return (data.data ?? [])
+    .filter((c) => (c.name ?? '').toUpperCase().includes(TAG))
+    .map((c) => ({
+      name: c.name ?? '',
+      status: c.effective_status ?? '',
+      lp: lpFromName(c.name ?? ''),
+    }));
+}
+
 // Returns per-LP ad metrics, or {} if Meta is not configured / fails.
 export async function getAdMetricsByLp(): Promise<Record<string, LpAdMetrics>> {
   if (!TOKEN || !ACCT) return {};

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { getAdMetricsByLp, type LpAdMetrics } from '@/lib/integrations/meta';
+import { getAdMetricsByLp, getCampaignList, type LpAdMetrics, type MetaCampaign } from '@/lib/integrations/meta';
 
 // Brazil (São Paulo) is UTC-3, no DST since 2019.
 const SP_OFFSET_MS = 3 * 60 * 60 * 1000;
@@ -107,10 +107,11 @@ export async function getScheduledSnapshot(): Promise<ScheduledSnapshot> {
 
 // Plain-text data snapshot for the Q&A assistant context.
 export async function getQaContext(): Promise<string> {
-  const [s, sources, ad] = await Promise.all([
+  const [s, sources, ad, campaigns] = await Promise.all([
     getScheduledSnapshot(),
     prisma.source.findMany({ select: { slug: true, sheetsId: true } }),
     getAdMetricsByLp().catch((): Record<string, LpAdMetrics> => ({})),
+    getCampaignList().catch((): MetaCampaign[] => []),
   ]);
 
   const sheetUrl = (slug: string) => {
@@ -162,6 +163,15 @@ export async function getQaContext(): Promise<string> {
     `Métricas de anúncio (Meta Ads):`,
     ...adLines,
     `- ${orcamento}`,
+    ``,
+    `Campanhas Meta ([PROJETOTRT2]) — ${campaigns.length} no total${
+      campaigns.length
+        ? ` (${campaigns.filter((c) => c.lp === 'LP01').length} LP01 + ${campaigns.filter((c) => c.lp === 'LP02').length} LP02)`
+        : ''
+    }:`,
+    ...(campaigns.length
+      ? campaigns.map((c) => `- [${c.status}] ${c.name}`)
+      : ['- (nenhuma campanha encontrada ainda)']),
     ``,
     `Links das planilhas (Google Sheets):`,
     `- Planilha de Captação: ${sheetUrl('lead')}`,
