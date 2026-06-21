@@ -88,7 +88,9 @@ export async function appendLeadToSheet(
   await sheets.spreadsheets.values.append({
     spreadsheetId: source.sheetsId,
     range: `${source.sheetTab}!A1`,
-    valueInputOption: 'USER_ENTERED',
+    // RAW so date/hour strings ("20/06/2026", "15:30:00") are stored as text and
+    // display correctly even if the column is formatted as "number" (avoids serials).
+    valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [row] },
   });

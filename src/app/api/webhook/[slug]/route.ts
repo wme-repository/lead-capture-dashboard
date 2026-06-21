@@ -196,7 +196,11 @@ export async function POST(
           meta?: { page_url?: string };
         };
         const utms = d.utms ?? {};
-        const paginaCaptura = d.pagina_captura ?? d.meta?.page_url ?? null;
+        const rawPagina = d.pagina_captura ?? d.meta?.page_url ?? null;
+        const lp = deriveLp(d.lp, rawPagina ?? undefined);
+        // LP02 chega como domínio base (UA do WordPress); usa a URL canônica da página.
+        const paginaCaptura =
+          lp === "LP02" ? "https://lp.oesquadraodeelite.com.br/projetotrt" : rawPagina;
         return {
           sourceId: source.id,
           schemaType: source.schemaType,
@@ -211,7 +215,7 @@ export async function POST(
           utmCampaign: d.utm_campaign ?? utms.utm_campaign ?? null,
           utmTerm: d.utm_term ?? utms.utm_term ?? null,
           utmContent: d.utm_content ?? utms.utm_content ?? null,
-          lp: deriveLp(d.lp, paginaCaptura ?? undefined),
+          lp,
           status: "pending",
         };
       })();
