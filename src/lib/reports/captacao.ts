@@ -1,5 +1,12 @@
 import { prisma } from '@/lib/prisma';
-import { getAdMetricsByLp, getCampaignList, type LpAdMetrics, type MetaCampaign } from '@/lib/integrations/meta';
+import {
+  getAdMetricsByLp,
+  getCampaignList,
+  getConjuntoPacing,
+  type LpAdMetrics,
+  type MetaCampaign,
+  type ConjuntoPacing,
+} from '@/lib/integrations/meta';
 
 // Brazil (São Paulo) is UTC-3, no DST since 2019.
 const SP_OFFSET_MS = 3 * 60 * 60 * 1000;
@@ -107,11 +114,12 @@ export async function getScheduledSnapshot(): Promise<ScheduledSnapshot> {
 
 // Plain-text data snapshot for the Q&A assistant context.
 export async function getQaContext(): Promise<string> {
-  const [s, sources, ad, campaigns, ultimosLeads] = await Promise.all([
+  const [s, sources, ad, campaigns, pacing, ultimosLeads] = await Promise.all([
     getScheduledSnapshot(),
     prisma.source.findMany({ select: { slug: true, sheetsId: true } }),
     getAdMetricsByLp().catch((): Record<string, LpAdMetrics> => ({})),
     getCampaignList().catch((): MetaCampaign[] => []),
+    getConjuntoPacing().catch((): ConjuntoPacing[] => []),
     prisma.lead.findMany({
       where: { schemaType: 'standard' },
       orderBy: { receivedAt: 'desc' },
@@ -198,6 +206,14 @@ export async function getQaContext(): Promise<string> {
     `Métricas de anúncio (Meta Ads):`,
     ...adLines,
     `- ${orcamento}`,
+    ``,
+    `Gasto por conjunto (Meta, [PROJETOTRT2], LP01+LP02 somados):`,
+    ...(pacing.length
+      ? pacing.map(
+          (p) =>
+            `- ${p.conjunto}: orçamento R$ ${p.budgetDia.toLocaleString('pt-BR')}/dia · gasto total R$ ${p.gastoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        )
+      : ['- (sem conjuntos / sem dados ainda)']),
     ``,
     `Campanhas Meta ([PROJETOTRT2]) — ${campaigns.length} no total${
       campaigns.length

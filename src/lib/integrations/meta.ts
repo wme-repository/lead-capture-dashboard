@@ -46,6 +46,61 @@ export interface MetaCampaign {
   lp: string | null;
 }
 
+export interface ConjuntoPacing {
+  conjunto: string;
+  budgetDia: number; // soma dos orçamentos diários (LP01+LP02)
+  gastoTotal: number; // gasto acumulado
+}
+
+async function fetchAllPaged<T>(firstUrl: string): Promise<T[]> {
+  const out: T[] = [];
+  let url: string | null = firstUrl;
+  let guard = 0;
+  while (url && guard < 20) {
+    const res: Response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+    if (!res.ok) throw new Error(`Meta ${res.status}: ${(await res.text()).slice(0, 150)}`);
+    const data = (await res.json()) as { data?: T[]; paging?: { next?: string } };
+    out.push(...(data.data ?? []));
+    url = data.paging?.next ?? null;
+    guard++;
+  }
+  return out;
+}
+
+// Gasto por conjunto (ad set) das campanhas [PROJETOTRT2], agrupado por nome
+// do conjunto (somando LP01+LP02). budgetDia = orçamento diário, gastoTotal = gasto acumulado.
+export async function getConjuntoPacing(): Promise<ConjuntoPacing[]> {
+  if (!TOKEN || !ACCT) return [];
+
+  type AdSet = { name?: string; daily_budget?: string; campaign?: { name?: string } };
+  type Insight = { adset_name?: string; spend?: string };
+
+  const [adsets, insights] = await Promise.all([
+    fetchAllPaged<AdSet>(
+      `${GRAPH}/${ACCT}/adsets?fields=name,daily_budget,campaign{name}&limit=500&access_token=${TOKEN}`,
+    ),
+    fetchAllPaged<Insight>(
+      `${GRAPH}/${ACCT}/insights?level=adset&fields=adset_name,spend&date_preset=maximum&limit=500&access_token=${TOKEN}`,
+    ).catch(() => [] as Insight[]),
+  ]);
+
+  const map = new Map<string, ConjuntoPacing>();
+  for (const a of adsets) {
+    if (!(a.campaign?.name ?? '').toUpperCase().includes(TAG)) continue;
+    const nome = (a.name ?? '').trim();
+    const e = map.get(nome) ?? { conjunto: nome, budgetDia: 0, gastoTotal: 0 };
+    e.budgetDia += a.daily_budget ? parseInt(a.daily_budget, 10) / 100 : 0;
+    map.set(nome, e);
+  }
+  for (const ins of insights) {
+    const nome = (ins.adset_name ?? '').trim();
+    const e = map.get(nome);
+    if (e) e.gastoTotal += parseFloat(ins.spend ?? '0') || 0;
+  }
+
+  return [...map.values()].sort((a, b) => b.budgetDia - a.budgetDia);
+}
+
 // Lista de campanhas [PROJETOTRT2] (nome + status + LP), ou [] se não configurado/falha.
 export async function getCampaignList(): Promise<MetaCampaign[]> {
   if (!TOKEN || !ACCT) return [];
