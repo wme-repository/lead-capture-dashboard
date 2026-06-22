@@ -72,6 +72,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ status: 'ignored_no_text' });
   }
 
+  // Feedback imediato: avisa que recebeu e vai buscar (não bloqueia a resposta se falhar)
+  try {
+    await sendWhatsAppText('🔎 Recebi sua pergunta, já estou buscando os dados...');
+  } catch {
+    /* segue mesmo se o aviso não sair */
+  }
+
   // Answer the question via DeepSeek using current captação data
   try {
     const context = await getQaContext();
