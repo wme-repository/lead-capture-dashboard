@@ -63,7 +63,7 @@ function ScoreRing({ row }: { row: DecisionRow }) {
           strokeLinecap="round"
         />
       </svg>
-      <span className="absolute text-[11px] font-semibold text-gray-700">{row.score}</span>
+      <span className="absolute text-xs font-semibold text-gray-700">{row.score}</span>
     </div>
   );
 }
@@ -84,12 +84,12 @@ function Kpi({
 }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className={`mt-1 text-xl font-semibold ${valueClass}`}>{value}</div>
-      {hint && <div className="mt-0.5 text-[11px] text-gray-400">{hint}</div>}
+      <div className="text-sm text-gray-600">{label}</div>
+      <div className={`mt-1 text-3xl font-semibold ${valueClass}`}>{value}</div>
+      {hint && <div className="mt-1 text-sm text-gray-500">{hint}</div>}
       {delta && (
-        <div className={`mt-0.5 flex items-center gap-0.5 text-[11px] ${delta.up ? "text-green-600" : "text-red-600"}`}>
-          {delta.up ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+        <div className={`mt-1 flex items-center gap-0.5 text-sm ${delta.up ? "text-green-600" : "text-red-600"}`}>
+          {delta.up ? <ArrowUp size={13} /> : <ArrowDown size={13} />}
           {delta.texto}
         </div>
       )}
@@ -110,16 +110,16 @@ function DistCard({
   const max = Math.max(1, ...itens.map((i) => i.orcamentoDia));
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <div className="mb-3 text-xs font-medium text-gray-500">{titulo}</div>
-      <div className="space-y-2.5">
+      <div className="mb-3 text-sm font-medium text-gray-600">{titulo}</div>
+      <div className="space-y-3">
         {itens.map((i) => (
           <div key={i.chave}>
-            <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1.5 font-medium text-gray-700">
+            <div className="mb-1 flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1.5 font-medium text-gray-800">
                 {icon?.(i.chave)}
                 {i.chave}
               </span>
-              <span className="text-gray-500">
+              <span className="text-gray-600">
                 {money(i.orcamentoDia)}/dia · {pct(i.pct)} · {int(i.leads)} leads
               </span>
             </div>
@@ -235,23 +235,23 @@ export default function OrcamentoDecisaoShell() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
-            <Scale size={20} /> Orçamento &amp; Decisão
+          <h1 className="flex items-center gap-2 text-2xl font-semibold text-gray-900">
+            <Scale size={24} /> Orçamento &amp; Decisão
             {fonte === "mock" && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                 dados de exemplo
               </span>
             )}
           </h1>
-          <p className="mt-0.5 text-sm text-gray-500">
+          <p className="mt-1 text-base text-gray-600">
             Mesa de decisão — cada métrica termina numa ação. A coluna <b>Decisão</b> vale mais que o status “ACTIVE”.
           </p>
         </div>
         <button
           onClick={atualizar}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
         >
-          <RotateCw size={13} className={loading ? "animate-spin" : ""} /> Atualizar dados
+          <RotateCw size={15} className={loading ? "animate-spin" : ""} /> Atualizar dados
         </button>
       </div>
 
@@ -289,15 +289,15 @@ export default function OrcamentoDecisaoShell() {
           {view.alerts.map((a) => (
             <div
               key={a.id}
-              className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
+              className={`flex items-start gap-2 rounded-lg border px-4 py-3 text-sm font-medium ${
                 a.prioridade === "alta"
                   ? "border-red-200 bg-red-50 text-red-800"
                   : a.prioridade === "media"
                     ? "border-amber-200 bg-amber-50 text-amber-800"
-                    : "border-gray-200 bg-gray-50 text-gray-600"
+                    : "border-gray-200 bg-gray-50 text-gray-700"
               }`}
             >
-              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              <AlertTriangle size={17} className="mt-0.5 shrink-0" />
               <span>{a.texto}</span>
             </div>
           ))}
@@ -311,7 +311,7 @@ export default function OrcamentoDecisaoShell() {
             <button
               key={j.id}
               onClick={() => trocarJanela(j.id)}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 janela === j.id ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
               }`}
             >
@@ -325,7 +325,7 @@ export default function OrcamentoDecisaoShell() {
             <button
               key={lp}
               onClick={() => toggle(lpFiltro, lp, setLpFiltro)}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
                 lpFiltro.has(lp) ? LP_BADGE[lp] : "bg-gray-100 text-gray-500"
               }`}
             >
@@ -336,7 +336,7 @@ export default function OrcamentoDecisaoShell() {
             <button
               key={p}
               onClick={() => toggle(pubFiltro, p, setPubFiltro)}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+              className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium ${
                 pubFiltro.has(p) ? PUBLICO_BADGE[p] : "bg-gray-100 text-gray-500"
               }`}
             >
@@ -352,20 +352,20 @@ export default function OrcamentoDecisaoShell() {
         <DistCard titulo="Por LP" itens={view.distLp} icon={(k) => <span className={`rounded px-1 text-[10px] ${LP_BADGE[k] ?? ""}`}>{k}</span>} />
         <DistCard titulo="Por público" itens={view.distPublico} icon={(k) => <PublicoIcon chave={k} />} />
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-            <TrendingUp size={13} /> Ações recomendadas
+          <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-gray-600">
+            <TrendingUp size={15} /> Ações recomendadas
           </div>
           {view.actions.length === 0 ? (
-            <div className="text-xs text-gray-400">Nada urgente — tudo dentro da meta.</div>
+            <div className="text-sm text-gray-500">Nada urgente — tudo dentro da meta.</div>
           ) : (
-            <ol className="space-y-2">
+            <ol className="space-y-2.5">
               {view.actions.map((a, i) => (
-                <li key={a.id} className="flex items-start gap-2 text-xs text-gray-700">
-                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-500">
+                <li key={a.id} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
                     {i + 1}
                   </span>
                   <span className="flex-1">{a.texto}</span>
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${PRIORIDADE_BADGE[a.prioridade]}`}>
+                  <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${PRIORIDADE_BADGE[a.prioridade]}`}>
                     {a.prioridade === "alta" ? "Alta" : a.prioridade === "media" ? "Média" : "Baixa"}
                   </span>
                 </li>
@@ -377,21 +377,21 @@ export default function OrcamentoDecisaoShell() {
 
       {/* DecisionTable */}
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-sm">
+        <table className="w-full text-base">
           <thead>
-            <tr className="border-b border-gray-100 text-left text-xs text-gray-500">
-              <th className="px-3 py-2 font-medium">Prioridade</th>
-              <th className="px-3 py-2 font-medium">LP</th>
-              <th className="px-3 py-2 font-medium">Público</th>
-              <th className="px-3 py-2 font-medium">Conjunto</th>
-              <th className="px-3 py-2 text-right font-medium">Orç./dia</th>
-              <th className="px-3 py-2 text-right font-medium">Gasto</th>
-              <th className="px-3 py-2 text-right font-medium">Leads</th>
-              <th className="px-3 py-2 text-right font-medium">CPL</th>
-              <th className="px-3 py-2 text-right font-medium">CTR</th>
-              <th className="px-3 py-2 text-right font-medium">Connect</th>
-              <th className="px-3 py-2 text-center font-medium">Score</th>
-              <th className="px-3 py-2 text-center font-medium">Decisão</th>
+            <tr className="border-b border-gray-100 text-left text-sm text-gray-600">
+              <th className="px-3 py-3 font-medium">Prioridade</th>
+              <th className="px-3 py-3 font-medium">LP</th>
+              <th className="px-3 py-3 font-medium">Público</th>
+              <th className="px-3 py-3 font-medium">Conjunto</th>
+              <th className="px-3 py-3 text-right font-medium">Orç./dia</th>
+              <th className="px-3 py-3 text-right font-medium">Gasto</th>
+              <th className="px-3 py-3 text-right font-medium">Leads</th>
+              <th className="px-3 py-3 text-right font-medium">CPL</th>
+              <th className="px-3 py-3 text-right font-medium">CTR</th>
+              <th className="px-3 py-3 text-right font-medium">Connect</th>
+              <th className="px-3 py-3 text-center font-medium">Score</th>
+              <th className="px-3 py-3 text-center font-medium">Decisão</th>
             </tr>
           </thead>
           <tbody>
@@ -404,46 +404,46 @@ export default function OrcamentoDecisaoShell() {
                   onClick={() => setSelecionada(r)}
                   className="cursor-pointer border-b border-gray-50 last:border-0 hover:bg-gray-50/60"
                 >
-                  <td className="px-3 py-2">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${tier.cls}`}>{tier.label}</span>
+                  <td className="px-3 py-3">
+                    <span className={`rounded px-2 py-0.5 text-xs font-medium ${tier.cls}`}>{tier.label}</span>
                   </td>
-                  <td className="px-3 py-2">
-                    <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${LP_BADGE[r.lp] ?? "bg-gray-100 text-gray-600"}`}>
+                  <td className="px-3 py-3">
+                    <span className={`rounded px-2 py-0.5 text-xs font-medium ${LP_BADGE[r.lp] ?? "bg-gray-100 text-gray-600"}`}>
                       {r.lp}
                     </span>
                   </td>
-                  <td className="px-3 py-2">
-                    <span className={`flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${PUBLICO_BADGE[r.publico]}`}>
+                  <td className="px-3 py-3">
+                    <span className={`flex w-fit items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${PUBLICO_BADGE[r.publico]}`}>
                       <PublicoIcon chave={r.publico} />
                       {r.publico}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-gray-800">
+                  <td className="px-3 py-3 text-gray-800">
                     {r.conjunto}
                     {r.flags.length > 0 && (
-                      <span className="ml-1 text-[10px] text-gray-400">
+                      <span className="ml-1 text-xs text-gray-500">
                         {r.flags.map((f) => ({ trocar_criativo: "criativo", revisar_lp: "LP", rever_publico: "público" })[f]).join(" · ")}
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-right text-gray-700">{money(r.orcamentoDia)}</td>
-                  <td className="px-3 py-2 text-right text-gray-700">{money(r.gasto)}</td>
-                  <td className="px-3 py-2 text-right text-gray-700">{int(r.leads)}</td>
-                  <td className="px-3 py-2 text-right font-medium text-gray-900">{money(r.cpl)}</td>
-                  <td className="px-3 py-2 text-right text-gray-600">{pct(r.ctr, 2)}</td>
-                  <td className="px-3 py-2 text-right text-gray-600">{r.connectRate > 0 ? pct(r.connectRate) : "—"}</td>
-                  <td className="px-3 py-2 text-center">
+                  <td className="px-3 py-3 text-right text-gray-700">{money(r.orcamentoDia)}</td>
+                  <td className="px-3 py-3 text-right text-gray-700">{money(r.gasto)}</td>
+                  <td className="px-3 py-3 text-right text-gray-700">{int(r.leads)}</td>
+                  <td className="px-3 py-3 text-right font-semibold text-gray-900">{money(r.cpl)}</td>
+                  <td className="px-3 py-3 text-right text-gray-600">{pct(r.ctr, 2)}</td>
+                  <td className="px-3 py-3 text-right text-gray-600">{r.connectRate > 0 ? pct(r.connectRate) : "—"}</td>
+                  <td className="px-3 py-3 text-center">
                     <div className="flex justify-center">
                       <ScoreRing row={r} />
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-center">
+                  <td className="px-3 py-3 text-center">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setAplicadas((m) => ({ ...m, [r.id]: r.decision }));
                       }}
-                      className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${dec.btn}`}
+                      className={`rounded-md px-3 py-1.5 text-xs font-semibold ${dec.btn}`}
                     >
                       {aplicadas[r.id] ? "✓ aplicado" : dec.label}
                     </button>
@@ -457,9 +457,9 @@ export default function OrcamentoDecisaoShell() {
 
       {/* ExecutiveSummary */}
       <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <div className="mb-1 text-xs font-medium text-gray-500">Resumo executivo</div>
-        <p className="text-sm leading-relaxed text-gray-700">{view.resumo}</p>
-        <button className="mt-2 text-xs font-medium text-blue-600 hover:underline">Ver relatório completo →</button>
+        <div className="mb-1 text-sm font-medium text-gray-600">Resumo executivo</div>
+        <p className="text-base leading-relaxed text-gray-700">{view.resumo}</p>
+        <button className="mt-2 text-sm font-medium text-blue-600 hover:underline">Ver relatório completo →</button>
       </div>
 
       {/* DrilldownPanel */}
@@ -476,25 +476,25 @@ function Drilldown({ row, onClose }: { row: DecisionRow; onClose: () => void }) 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/20" onClick={onClose}>
       <div
-        className="h-full w-full max-w-md overflow-y-auto border-l border-gray-200 bg-white p-5 shadow-xl"
+        className="h-full w-full max-w-5xl overflow-y-auto border-l border-gray-200 bg-white p-10 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-gray-400">{row.campanha}</div>
-            <h2 className="text-lg font-semibold text-gray-900">{row.conjunto}</h2>
-            <div className="mt-1 flex items-center gap-1.5">
-              <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${LP_BADGE[row.lp] ?? ""}`}>{row.lp}</span>
-              <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${PUBLICO_BADGE[row.publico]}`}>{row.publico}</span>
-              <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${dec.chip}`}>{dec.label}</span>
+            <div className="text-base text-gray-500">{row.campanha}</div>
+            <h2 className="mt-1 text-4xl font-semibold text-gray-900">{row.conjunto}</h2>
+            <div className="mt-3 flex items-center gap-2">
+              <span className={`rounded px-2.5 py-1 text-base font-medium ${LP_BADGE[row.lp] ?? ""}`}>{row.lp}</span>
+              <span className={`rounded px-2.5 py-1 text-base font-medium ${PUBLICO_BADGE[row.publico]}`}>{row.publico}</span>
+              <span className={`rounded px-2.5 py-1 text-base font-semibold ${dec.chip}`}>{dec.label}</span>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 text-gray-400 hover:bg-gray-100">
-            <X size={18} />
+          <button onClick={onClose} className="rounded-md p-2 text-gray-400 hover:bg-gray-100">
+            <X size={28} />
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+        <div className="mt-8 grid grid-cols-3 gap-4 text-center">
           {[
             { l: "CPL", v: money(row.cpl) },
             { l: "Score", v: String(row.score) },
@@ -503,24 +503,24 @@ function Drilldown({ row, onClose }: { row: DecisionRow; onClose: () => void }) 
             { l: "CTR", v: pct(row.ctr, 2) },
             { l: "Connect", v: row.connectRate > 0 ? pct(row.connectRate) : "—" },
           ].map((m) => (
-            <div key={m.l} className="rounded-lg border border-gray-100 bg-gray-50 p-2">
-              <div className="text-[10px] text-gray-400">{m.l}</div>
-              <div className="text-sm font-semibold text-gray-800">{m.v}</div>
+            <div key={m.l} className="rounded-xl border border-gray-100 bg-gray-50 p-5">
+              <div className="text-sm text-gray-500">{m.l}</div>
+              <div className="mt-1 text-3xl font-semibold text-gray-800">{m.v}</div>
             </div>
           ))}
         </div>
 
         {row.flags.length > 0 && (
-          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-5 text-base font-medium text-amber-800">
             Sinais: {row.flags.map((f) => ({ trocar_criativo: "trocar criativo", revisar_lp: "revisar LP", rever_publico: "rever público" })[f]).join(" · ")}
           </div>
         )}
 
         {/* Seções placeholder (mock) */}
         {["Criativos & anúncios", "Histórico 3D / 7D", "Eventos", "UTMs"].map((s) => (
-          <div key={s} className="mt-4">
-            <div className="mb-1 text-xs font-medium text-gray-500">{s}</div>
-            <div className="rounded-lg border border-dashed border-gray-200 p-3 text-xs text-gray-400">
+          <div key={s} className="mt-8">
+            <div className="mb-2 text-base font-medium text-gray-600">{s}</div>
+            <div className="rounded-lg border border-dashed border-gray-200 p-6 text-base text-gray-500">
               Dados de {s.toLowerCase()} aparecem aqui quando o adapter real estiver ligado.
             </div>
           </div>
