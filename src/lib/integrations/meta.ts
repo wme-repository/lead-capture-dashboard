@@ -11,6 +11,7 @@ export interface LpAdMetrics {
   linkClicks: number;
   lpViews: number;
   ctr: number; // link_clicks / impressions * 100
+  leads: number; // leads ATRIBUÍDOS pelo Meta (pixel) — subconta a LP02
 }
 
 interface MetaAction {
@@ -343,11 +344,12 @@ export async function getAdMetricsByLp(): Promise<Record<string, LpAdMetrics>> {
     const lp = row.campaign_id ? idToLp.get(row.campaign_id) : undefined;
     if (!lp) continue;
     const bucket =
-      out[lp] ?? (out[lp] = { spend: 0, impressions: 0, linkClicks: 0, lpViews: 0, ctr: 0 });
+      out[lp] ?? (out[lp] = { spend: 0, impressions: 0, linkClicks: 0, lpViews: 0, ctr: 0, leads: 0 });
     bucket.spend += parseFloat(row.spend ?? '0') || 0;
     bucket.impressions += parseInt(row.impressions ?? '0', 10) || 0;
     bucket.linkClicks += parseInt(row.inline_link_clicks ?? '0', 10) || 0;
     bucket.lpViews += actionValue(row.actions, 'landing_page_view');
+    bucket.leads += leadCountFromActions(row.actions);
   }
 
   for (const m of Object.values(out)) {

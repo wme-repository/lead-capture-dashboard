@@ -163,6 +163,11 @@ export async function getQaContext(): Promise<string> {
   const totalSpend = Object.values(ad).reduce((acc, m) => acc + m.spend, 0);
   const budgetTotal = Number(process.env.REPORT_BUDGET_TOTAL ?? 0) || null;
   const leadsByLp = (lp: string) => s.lp.find((x) => x.nome === lp)?.count ?? 0;
+  // Leads ATRIBUÍDOS pelo Meta (pixel) — subconta a LP02. Para comparar com a nossa base.
+  const metaLeadsTotal = Object.values(ad).reduce((acc, m) => acc + m.leads, 0);
+  const metaLeadsByLp = Object.entries(ad)
+    .map(([lp, m]) => `${lp}=${m.leads}`)
+    .join(', ');
 
   const adLines = hasAd
     ? Object.entries(ad).map(([lp, m]) => {
@@ -206,6 +211,9 @@ export async function getQaContext(): Promise<string> {
     `Métricas de anúncio (Meta Ads):`,
     ...adLines,
     `- ${orcamento}`,
+    ``,
+    `Leads no GERENCIADOR do Meta (atribuídos pelo pixel): ${hasAd ? `total ${metaLeadsTotal}${metaLeadsByLp ? ` (${metaLeadsByLp})` : ''}` : 'n/d'}`,
+    `⚠️ DIVERGÊNCIA leads Meta × nossa base: o gerenciador do Meta mostra MENOS leads (${hasAd ? metaLeadsTotal : 'n/d'}) do que a nossa base real (${s.capt.total}). MOTIVO: o evento de Lead do pixel da LP02 (lp.oesquadraodeelite.com.br/projetotrt, feita em WordPress/Elementor) não está disparando, então o Meta NÃO contabiliza a maioria dos leads da LP02 (a LP01 bate certo; a LP02 o Meta subconta muito). SEMPRE trate o número da NOSSA base (${s.capt.total}) como o correto/oficial. Se perguntarem por que o gerenciador mostra menos leads, explique exatamente esse motivo. O CPL informado acima já é o REAL (gasto do Meta ÷ NOSSOS leads) e é mais confiável que o CPL do gerenciador, que fica inflado na LP02 por causa do subcount.`,
     ``,
     `Gasto por conjunto (Meta, [PROJETOTRT2], LP01+LP02 somados):`,
     ...(pacing.length
