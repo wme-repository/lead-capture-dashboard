@@ -132,7 +132,9 @@ export async function getQaContext(): Promise<string> {
 
   // Projeção de gasto do dia (orçamento diário = TETO). Dia-conta do Meta em PDT
   // (-7h, reseta 00:00 PDT = 04:00 BRT). Projeção LIMITADA ao teto (Meta freia).
-  const DAILY_BUDGET = 6300;
+  const DAILY_BUDGET = Number(process.env.REPORT_DAILY_BUDGET ?? 6300) || 6300;
+  const budgetFmt = `R$ ${DAILY_BUDGET.toLocaleString('pt-BR')}`;
+  const budget125Fmt = `R$ ${Math.round(DAILY_BUDGET * 1.25).toLocaleString('pt-BR')}`;
   const pdtMs = Date.now() - 7 * 60 * 60 * 1000;
   const fracDia = (((pdtMs % 86_400_000) + 86_400_000) % 86_400_000) / 86_400_000; // 0..1
   const fracPct = Math.round(fracDia * 100);
@@ -145,8 +147,8 @@ export async function getQaContext(): Promise<string> {
     const pace = gastoHoje / fracDia; // extrapolação linear (antes do teto agir)
     projecaoLinha =
       pace >= DAILY_BUDGET
-        ? `no ritmo atual o gasto bate o TETO de R$ 6.300 ainda hoje — o Meta reduz a entrega ao se aproximar do teto, então o dia fecha em torno de R$ 6.300 (no máx ~25% = ~R$ 7.875 num dia isolado, compensado nos outros dias). NÃO dispara além disso.`
-        : `no ritmo atual projeta ~${money(pace)} no dia — abaixo do teto de R$ 6.300.`;
+        ? `no ritmo atual o gasto bate o TETO de ${budgetFmt} ainda hoje — o Meta reduz a entrega ao se aproximar do teto, então o dia fecha em torno de ${budgetFmt} (no máx ~25% = ~${budget125Fmt} num dia isolado, compensado nos outros dias). NÃO dispara além disso.`
+        : `no ritmo atual projeta ~${money(pace)} no dia — abaixo do teto de ${budgetFmt}.`;
   }
 
   // Cruza o score/faixa (questionário) com os últimos leads de captação por email
@@ -212,7 +214,7 @@ export async function getQaContext(): Promise<string> {
     `- Projeto TRT: captação para o lançamento (aulas ao vivo de 6 a 9 de julho de 2026).`,
     `- 2 landing pages (URLs exatas): LP01 = https://trt.oesquadraodeelite.com.br | LP02 = https://lp.oesquadraodeelite.com.br/projetotrt`,
     `- Fluxo do lead: preenche a LP (nome/email/telefone) e depois responde o questionário (11 perguntas) que gera o LeadScore e a faixa (A, B, C ou D). Qualificados = faixa A+B.`,
-    `- Campanhas Meta rodam de 21/06 a 06/07/2026. Orçamento: R$ 6.300/dia, teto total de R$ 250.000. Meta de captação: 30.000 leads (atual: ${s.capt.total}, ${pct(s.capt.total, Number(process.env.LEADS_GOAL ?? 30000))}% da meta).`,
+    `- Campanhas Meta rodam de 21/06 a 06/07/2026. Orçamento: ${budgetFmt}/dia, teto total de R$ 250.000. Meta de captação: 30.000 leads (atual: ${s.capt.total}, ${pct(s.capt.total, Number(process.env.LEADS_GOAL ?? 30000))}% da meta).`,
     `- Destinos de cada lead: Google Sheets, CRM DataCrazy (dispara WhatsApp) e banco Supabase.`,
     ``,
     `Captação (LEAD/UTM):`,
@@ -232,8 +234,8 @@ export async function getQaContext(): Promise<string> {
     `Métricas de anúncio (Meta Ads):`,
     ...adLines,
     `- ${orcamento}`,
-    `- Orçamento DIÁRIO: R$ 6.300/dia (soma dos 30 conjuntos). É um TETO — o Meta NÃO ultrapassa o orçamento diário de forma relevante (no máximo ~25% num dia isolado, compensado nos outros dias pra média bater o diário). Então o gasto por dia tende a ficar em torno de R$ 6.300 e NÃO dispara/foge do controle. ATENÇÃO: o "Gasto" informado acima é ACUMULADO desde o início do lançamento (22/06), NÃO o gasto só de hoje — não compare o acumulado direto com o orçamento diário ao responder se "vai ultrapassar".`,
-    `- Gasto de HOJE (dia atual, reseta 04:00 BRT): ${gastoHoje == null ? 'n/d' : `${money(gastoHoje)} de R$ 6.300 (${pct(gastoHoje, DAILY_BUDGET)}% do orçamento diário)`} · dia decorrido: ${fracPct}%`,
+    `- Orçamento DIÁRIO: ${budgetFmt}/dia (soma dos conjuntos). É um TETO — o Meta NÃO ultrapassa o orçamento diário de forma relevante (no máximo ~25% num dia isolado, compensado nos outros dias pra média bater o diário). Então o gasto por dia tende a ficar em torno de ${budgetFmt} e NÃO dispara/foge do controle. ATENÇÃO: o "Gasto" informado acima é ACUMULADO desde o início do lançamento (22/06), NÃO o gasto só de hoje — não compare o acumulado direto com o orçamento diário ao responder se "vai ultrapassar".`,
+    `- Gasto de HOJE (dia atual, reseta 04:00 BRT): ${gastoHoje == null ? 'n/d' : `${money(gastoHoje)} de ${budgetFmt} (${pct(gastoHoje, DAILY_BUDGET)}% do orçamento diário)`} · dia decorrido: ${fracPct}%`,
     `- Projeção do gasto de hoje (para "vai ultrapassar o orçamento?"): ${projecaoLinha}`,
     ``,
     `Leads no GERENCIADOR do Meta (atribuídos pelo pixel): ${hasAd ? `total ${metaLeadsTotal}${metaLeadsByLp ? ` (${metaLeadsByLp})` : ''}` : 'n/d'}`,
