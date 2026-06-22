@@ -17,7 +17,13 @@ export default async function LeadsPage({
 
   const where: Prisma.LeadWhereInput = {};
   if (sp.source) where.source = { slug: sp.source };
-  if (sp.grade && ["A", "B", "C", "D"].includes(sp.grade)) where.grade = sp.grade;
+  if (sp.grade && ["A", "B", "C", "D"].includes(sp.grade)) {
+    // grade só existe na linha de questionário
+    where.grade = sp.grade;
+  } else {
+    // Sem filtro de faixa: contar/listar só captação (1 linha por pessoa) — evita dobrar com questionário.
+    where.schemaType = "standard";
+  }
   if (sp.q) {
     where.OR = [
       { name: { contains: sp.q, mode: "insensitive" } },

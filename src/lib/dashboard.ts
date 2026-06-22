@@ -64,10 +64,12 @@ export async function getDashboardData(
   const spanStart = new Date(now.getTime() - spanDays * DAY_MS);
 
   const [totalAllTime, rows, syncGroups] = await Promise.all([
-    prisma.lead.count({ where }),
+    // Só captação (standard): cada pessoa tem 2 linhas no Lead (standard + questionnaire);
+    // contar as duas inflava o total. As faixas A/B abaixo usam grade (linha de questionário).
+    prisma.lead.count({ where: { ...where, schemaType: "standard" } }),
     prisma.lead.findMany({
       where: { ...where, receivedAt: { gte: spanStart } },
-      select: { receivedAt: true, grade: true, utmSource: true },
+      select: { receivedAt: true, grade: true, utmSource: true, schemaType: true },
     }),
     prisma.syncLog.groupBy({
       by: ['status'],
@@ -89,8 +91,10 @@ export async function getDashboardData(
     syncPct: syncTotal > 0 ? Math.round((syncDone / syncTotal) * 100) : 100,
   };
 
+  // Contagem de leads = só captação (standard). Evita dobrar com as linhas de questionário.
   const between = (a: Date, b: Date) =>
-    rows.filter((r) => r.receivedAt >= a && r.receivedAt < b).length;
+    rows.filter((r) => r.schemaType === "standard" && r.receivedAt >= a && r.receivedAt < b)
+      .length;
 
   // Period window + previous equal window
   const startToday = brtDayStart(now);
@@ -124,7 +128,7 @@ export async function getDashboardData(
   const dailyAB = new Map<string, { ab: number; graded: number }>();
   for (const r of rows) {
     const k = brtDayKey(r.receivedAt);
-    dailyCount.set(k, (dailyCount.get(k) ?? 0) + 1);
+    if (r.schemaType === "standard") dailyCount.set(k, (dailyCount.get(k) ?? 0) + 1);
     if (r.grade) {
       const e = dailyAB.get(k) ?? { ab: 0, graded: 0 };
       e.graded += 1;
@@ -193,6 +197,7 @@ export async function getDashboardData(
   // --- Origin breakdown over period ---
   const originMap = new Map<string, number>();
   for (const r of rows) {
+    if (r.schemaType !== "standard") continue;
     if (r.receivedAt < periodStart) continue;
     const k = r.utmSource || "direto";
     originMap.set(k, (originMap.get(k) ?? 0) + 1);
