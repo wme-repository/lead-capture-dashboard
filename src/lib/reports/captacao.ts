@@ -3,6 +3,7 @@ import {
   getAdMetricsByLp,
   getCampaignList,
   getConjuntoPacing,
+  getSpendToday,
   type LpAdMetrics,
   type MetaCampaign,
   type ConjuntoPacing,
@@ -114,7 +115,7 @@ export async function getScheduledSnapshot(): Promise<ScheduledSnapshot> {
 
 // Plain-text data snapshot for the Q&A assistant context.
 export async function getQaContext(): Promise<string> {
-  const [s, sources, ad, campaigns, pacing, ultimosLeads] = await Promise.all([
+  const [s, sources, ad, campaigns, pacing, ultimosLeads, gastoHoje] = await Promise.all([
     getScheduledSnapshot(),
     prisma.source.findMany({ select: { slug: true, sheetsId: true } }),
     getAdMetricsByLp().catch((): Record<string, LpAdMetrics> => ({})),
@@ -126,7 +127,27 @@ export async function getQaContext(): Promise<string> {
       take: 5,
       select: { name: true, email: true, lp: true, receivedAt: true },
     }),
+    getSpendToday().catch((): number | null => null),
   ]);
+
+  // Projeção de gasto do dia (orçamento diário = TETO). Dia-conta do Meta em PDT
+  // (-7h, reseta 00:00 PDT = 04:00 BRT). Projeção LIMITADA ao teto (Meta freia).
+  const DAILY_BUDGET = 6300;
+  const pdtMs = Date.now() - 7 * 60 * 60 * 1000;
+  const fracDia = (((pdtMs % 86_400_000) + 86_400_000) % 86_400_000) / 86_400_000; // 0..1
+  const fracPct = Math.round(fracDia * 100);
+  let projecaoLinha: string;
+  if (gastoHoje == null) {
+    projecaoLinha = 'gasto de hoje indisponível (n/d).';
+  } else if (fracDia <= 0.04) {
+    projecaoLinha = `gasto hoje ${money(gastoHoje)}; início do dia, cedo demais para projetar com confiança.`;
+  } else {
+    const pace = gastoHoje / fracDia; // extrapolação linear (antes do teto agir)
+    projecaoLinha =
+      pace >= DAILY_BUDGET
+        ? `no ritmo atual o gasto bate o TETO de R$ 6.300 ainda hoje — o Meta reduz a entrega ao se aproximar do teto, então o dia fecha em torno de R$ 6.300 (no máx ~25% = ~R$ 7.875 num dia isolado, compensado nos outros dias). NÃO dispara além disso.`
+        : `no ritmo atual projeta ~${money(pace)} no dia — abaixo do teto de R$ 6.300.`;
+  }
 
   // Cruza o score/faixa (questionário) com os últimos leads de captação por email
   const emails = ultimosLeads.map((l) => (l.email ?? '').toLowerCase()).filter(Boolean);
@@ -212,6 +233,8 @@ export async function getQaContext(): Promise<string> {
     ...adLines,
     `- ${orcamento}`,
     `- Orçamento DIÁRIO: R$ 6.300/dia (soma dos 30 conjuntos). É um TETO — o Meta NÃO ultrapassa o orçamento diário de forma relevante (no máximo ~25% num dia isolado, compensado nos outros dias pra média bater o diário). Então o gasto por dia tende a ficar em torno de R$ 6.300 e NÃO dispara/foge do controle. ATENÇÃO: o "Gasto" informado acima é ACUMULADO desde o início do lançamento (22/06), NÃO o gasto só de hoje — não compare o acumulado direto com o orçamento diário ao responder se "vai ultrapassar".`,
+    `- Gasto de HOJE (dia atual, reseta 04:00 BRT): ${gastoHoje == null ? 'n/d' : `${money(gastoHoje)} de R$ 6.300 (${pct(gastoHoje, DAILY_BUDGET)}% do orçamento diário)`} · dia decorrido: ${fracPct}%`,
+    `- Projeção do gasto de hoje (para "vai ultrapassar o orçamento?"): ${projecaoLinha}`,
     ``,
     `Leads no GERENCIADOR do Meta (atribuídos pelo pixel): ${hasAd ? `total ${metaLeadsTotal}${metaLeadsByLp ? ` (${metaLeadsByLp})` : ''}` : 'n/d'}`,
     `⚠️ DIVERGÊNCIA leads Meta × nossa base: o gerenciador do Meta mostra MENOS leads (${hasAd ? metaLeadsTotal : 'n/d'}) do que a nossa base real (${s.capt.total}). MOTIVO: o evento de Lead do pixel da LP02 (lp.oesquadraodeelite.com.br/projetotrt, feita em WordPress/Elementor) não está disparando, então o Meta NÃO contabiliza a maioria dos leads da LP02 (a LP01 bate certo; a LP02 o Meta subconta muito). SEMPRE trate o número da NOSSA base (${s.capt.total}) como o correto/oficial. Se perguntarem por que o gerenciador mostra menos leads, explique exatamente esse motivo. O CPL informado acima já é o REAL (gasto do Meta ÷ NOSSOS leads) e é mais confiável que o CPL do gerenciador, que fica inflado na LP02 por causa do subcount.`,

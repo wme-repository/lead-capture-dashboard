@@ -358,3 +358,26 @@ export async function getAdMetricsByLp(): Promise<Record<string, LpAdMetrics>> {
 
   return out;
 }
+
+// Gasto de HOJE (dia-conta do Meta) das campanhas [PROJETOTRT2]. Escopa pelos
+// IDs da tag (mesma razão do getAdMetricsByLp: conta tem milhares de campanhas).
+// Retorna null se não configurado/sem campanhas.
+export async function getSpendToday(): Promise<number | null> {
+  if (!TOKEN || !ACCT) return null;
+
+  const campaigns = await fetchAllPaged<{ id?: string; name?: string }>(
+    `${GRAPH}/${ACCT}/campaigns?fields=id,name&limit=200&access_token=${TOKEN}`,
+  );
+  const ids = campaigns
+    .filter((c) => (c.name ?? '').toUpperCase().includes(TAG) && c.id)
+    .map((c) => c.id as string);
+  if (!ids.length) return null;
+
+  const filtering = encodeURIComponent(
+    JSON.stringify([{ field: 'campaign.id', operator: 'IN', value: ids }]),
+  );
+  const rows = await fetchAllPaged<{ spend?: string }>(
+    `${GRAPH}/${ACCT}/insights?level=campaign&fields=spend&date_preset=today&filtering=${filtering}&limit=200&access_token=${TOKEN}`,
+  );
+  return rows.reduce((sum, r) => sum + (parseFloat(r.spend ?? '0') || 0), 0);
+}
