@@ -3,7 +3,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { triggerIntegrations } from "@/lib/integrations/trigger";
 import { sendWhatsAppText } from "@/lib/integrations/evolution";
-import { buildBlockReport } from "@/lib/reports/block";
+import { buildScheduledReport } from "@/lib/reports/captacao";
 import {
   StandardLeadSchema,
   QuestionnaireLeadSchema,
@@ -284,7 +284,7 @@ export async function POST(
         if (every > 0) {
           const total = await prisma.lead.count({ where: { schemaType: "standard" } });
           if (total > 0 && total % every === 0) {
-            const report = await buildBlockReport();
+            const report = await buildScheduledReport();
             await sendWhatsAppText(report);
           }
         }
