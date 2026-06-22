@@ -19,6 +19,7 @@ interface MetaAction {
 }
 
 interface MetaRow {
+  campaign_id?: string;
   campaign_name?: string;
   spend?: string;
   impressions?: string;
@@ -313,27 +314,33 @@ export async function getMetaAdSets(datePreset = 'maximum'): Promise<MetaAdSet[]
 }
 
 // Returns per-LP ad metrics, or {} if Meta is not configured / fails.
+// A conta tem milhares de campanhas no histórico, então NÃO dá pra puxar um
+// insights cru (limit 500) e filtrar pelo nome — as do [PROJETOTRT2] ficam de
+// fora da página e o gasto vira n/d. Escopa o insights pelos IDs das campanhas
+// da tag via filtering=campaign.id IN [...].
 export async function getAdMetricsByLp(): Promise<Record<string, LpAdMetrics>> {
   if (!TOKEN || !ACCT) return {};
 
-  const url = new URL(`${GRAPH}/${ACCT}/insights`);
-  url.searchParams.set('level', 'campaign');
-  url.searchParams.set('fields', 'campaign_name,spend,impressions,inline_link_clicks,actions');
-  url.searchParams.set('date_preset', 'maximum');
-  url.searchParams.set('limit', '500');
-  url.searchParams.set('access_token', TOKEN);
-
-  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Meta insights ${res.status}: ${body.slice(0, 200)}`);
+  const campaigns = await fetchAllPaged<{ id?: string; name?: string }>(
+    `${GRAPH}/${ACCT}/campaigns?fields=id,name&limit=200&access_token=${TOKEN}`,
+  );
+  const idToLp = new Map<string, string>();
+  for (const c of campaigns) {
+    const lp = lpFromName(c.name ?? '');
+    if (lp && c.id) idToLp.set(c.id, lp);
   }
+  if (!idToLp.size) return {};
 
-  const data = (await res.json()) as { data?: MetaRow[] };
+  const filtering = encodeURIComponent(
+    JSON.stringify([{ field: 'campaign.id', operator: 'IN', value: [...idToLp.keys()] }]),
+  );
+  const rows = await fetchAllPaged<MetaRow>(
+    `${GRAPH}/${ACCT}/insights?level=campaign&fields=campaign_id,spend,impressions,inline_link_clicks,actions&date_preset=maximum&filtering=${filtering}&limit=200&access_token=${TOKEN}`,
+  );
+
   const out: Record<string, LpAdMetrics> = {};
-
-  for (const row of data.data ?? []) {
-    const lp = lpFromName(row.campaign_name ?? '');
+  for (const row of rows) {
+    const lp = row.campaign_id ? idToLp.get(row.campaign_id) : undefined;
     if (!lp) continue;
     const bucket =
       out[lp] ?? (out[lp] = { spend: 0, impressions: 0, linkClicks: 0, lpViews: 0, ctr: 0 });
