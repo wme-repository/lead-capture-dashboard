@@ -289,9 +289,9 @@ export default function OrcamentoDecisaoShell() {
           {view.alerts.map((a) => (
             <div
               key={a.id}
-              className={`flex items-start gap-2 rounded-lg border px-4 py-3 text-sm font-medium ${
+              className={`flex items-start gap-2 rounded-lg border px-4 py-3 text-sm font-bold ${
                 a.prioridade === "alta"
-                  ? "border-red-200 bg-red-50 text-red-800"
+                  ? "border-red-700 bg-red-700 text-white"
                   : a.prioridade === "media"
                     ? "border-amber-200 bg-amber-50 text-amber-800"
                     : "border-gray-200 bg-gray-50 text-gray-700"
