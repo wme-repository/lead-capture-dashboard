@@ -40,6 +40,13 @@ function lpFromName(name: string): string | null {
   return null;
 }
 
+function tempFromName(name: string): string | null {
+  const u = name.toUpperCase();
+  return u.includes('QUENTE') ? 'QUENTE' : u.includes('FRIO') ? 'FRIO' : null;
+}
+
+export const isMetaConfigured = (): boolean => Boolean(TOKEN && ACCT);
+
 export interface MetaCampaign {
   name: string;
   status: string;
@@ -228,6 +235,81 @@ export async function getMetaConjuntos(): Promise<CampanhaBreakdown[]> {
   }
 
   return [...byCampaign.values()].sort((a, b) => a.campanha.localeCompare(b.campanha));
+}
+
+// Conjunto (ad set) das campanhas [PROJETOTRT2] com métricas ricas p/ a aba
+// "Orçamento & Decisão": gasto, orçamento, status + CTR e Connect Rate por conjunto.
+// datePreset segue a janela escolhida (today/yesterday/last_3d/last_7d/last_14d/maximum).
+export interface MetaAdSet {
+  id: string;
+  conjunto: string;
+  campanha: string;
+  lp: string | null;
+  temperatura: string | null;
+  status: string; // effective_status do Meta
+  budgetDia: number;
+  gasto: number;
+  impressions: number;
+  linkClicks: number;
+  lpViews: number;
+  ctr: number; // fração: link_clicks / impressions
+  connectRate: number; // fração: landing_page_view / inline_link_clicks
+}
+
+export async function getMetaAdSets(datePreset = 'maximum'): Promise<MetaAdSet[]> {
+  if (!TOKEN || !ACCT) return [];
+
+  type Camp = { id?: string; name?: string };
+  type AdSet = { id?: string; name?: string; daily_budget?: string; effective_status?: string; campaign?: { id?: string } };
+  type Insight = {
+    adset_id?: string;
+    spend?: string;
+    impressions?: string;
+    inline_link_clicks?: string;
+    actions?: MetaAction[];
+  };
+
+  const [campaigns, adsets, insights] = await Promise.all([
+    fetchAllPaged<Camp>(`${GRAPH}/${ACCT}/campaigns?fields=id,name&limit=500&access_token=${TOKEN}`),
+    fetchAllPaged<AdSet>(
+      `${GRAPH}/${ACCT}/adsets?fields=id,name,daily_budget,effective_status,campaign{id}&limit=500&access_token=${TOKEN}`,
+    ),
+    fetchAllPaged<Insight>(
+      `${GRAPH}/${ACCT}/insights?level=adset&fields=adset_id,spend,impressions,inline_link_clicks,actions&date_preset=${datePreset}&limit=500&access_token=${TOKEN}`,
+    ).catch(() => [] as Insight[]),
+  ]);
+
+  const campById = new Map(
+    campaigns.filter((c) => (c.name ?? '').toUpperCase().includes(TAG)).map((c) => [c.id ?? '', c.name ?? '']),
+  );
+  const insByAdset = new Map<string, Insight>();
+  for (const ins of insights) if (ins.adset_id) insByAdset.set(ins.adset_id, ins);
+
+  const out: MetaAdSet[] = [];
+  for (const a of adsets) {
+    const campName = campById.get(a.campaign?.id ?? '');
+    if (!campName) continue;
+    const ins = insByAdset.get(a.id ?? '');
+    const impressions = parseInt(ins?.impressions ?? '0', 10) || 0;
+    const linkClicks = parseInt(ins?.inline_link_clicks ?? '0', 10) || 0;
+    const lpViews = actionValue(ins?.actions, 'landing_page_view');
+    out.push({
+      id: a.id ?? '',
+      conjunto: (a.name ?? '').trim(),
+      campanha: campName,
+      lp: lpFromName(campName),
+      temperatura: tempFromName(campName),
+      status: a.effective_status ?? '',
+      budgetDia: a.daily_budget ? parseInt(a.daily_budget, 10) / 100 : 0,
+      gasto: parseFloat(ins?.spend ?? '0') || 0,
+      impressions,
+      linkClicks,
+      lpViews,
+      ctr: impressions > 0 ? linkClicks / impressions : 0,
+      connectRate: linkClicks > 0 ? lpViews / linkClicks : 0,
+    });
+  }
+  return out;
 }
 
 // Returns per-LP ad metrics, or {} if Meta is not configured / fails.
