@@ -38,13 +38,19 @@ export function classifyOrigin(
   const src = lc(utmSource);
   const med = lc(utmMedium);
 
+  // utm_source é o sinal forte e tem prioridade sobre o medium genérico.
+  // Google Ads manda utm_medium=cpc; o Meta deste projeto usa o nome do conjunto
+  // como medium (nunca "cpc"), então só o Google bate em "cpc" — checar source=google
+  // antes evita que o Google caia na regra de "Meta Ads" abaixo.
+  if (has(src, "google")) return "Google";
+
   if (
     has(src, "meta", "facebook", "instagram", "fb", "ig") ||
     has(med, "paid_social", "cpc", "ads", "pago", "paidsocial")
   )
     return "Meta Ads";
 
-  if (has(src, "google") || has(med, "cpc", "ppc", "search")) return "Google";
+  if (has(med, "ppc", "search")) return "Google";
   if (has(src, "whatsapp", "wa") || has(med, "whatsapp")) return "WhatsApp";
 
   if (
