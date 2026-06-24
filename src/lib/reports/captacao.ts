@@ -205,6 +205,8 @@ export async function getQaContext(): Promise<string> {
       } · Falta ${hasAd ? money(budgetTotal - totalSpend) : 'n/d'}`
     : 'Orçamento não configurado.';
 
+  const googleLines = await getGoogleLines();
+
   return [
     `DADOS ATUAIS DA CAPTAÇÃO (Projeto TRT) — ${s.data} ${s.hora}`,
     ``,
@@ -256,6 +258,7 @@ export async function getQaContext(): Promise<string> {
       ? campaigns.map((c) => `- [${c.status}] ${c.name}`)
       : ['- (nenhuma campanha encontrada ainda)']),
     `IMPORTANTE: status "ACTIVE" no Meta NÃO significa que já estão entregando. As campanhas estão PROGRAMADAS para começar a rodar a partir das 00:00 de 21/06/2026. Enquanto não houver gasto/impressões (investido = n/d), elas ainda não começaram de fato — não diga que estão entregando só pelo status.`,
+    ...googleLines,
     ``,
     `RECURSOS / FERRAMENTAS DISPONÍVEIS (quando pedirem para "listar planilhas, CRM e workflows"):`,
     `- Planilhas Google Sheets: Captação → ${sheetUrl('lead')} | Questionário/Leadscore → ${sheetUrl('quest')}`,
@@ -280,6 +283,66 @@ function money(v: number | null): string {
   return v == null
     ? 'n/d'
     : `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// Contexto do Google Ads (YouTube) — lê a tabela google_metrics (atualizada de hora
+// em hora por um job externo). FAIL-OPEN e atrás de flag: se desligado, tabela vazia
+// ou qualquer erro, retorna [] e o agente segue 100% com o Meta. Nunca derruba o Q&A.
+async function getGoogleLines(): Promise<string[]> {
+  if (process.env.GOOGLE_CONTEXT_ENABLED !== 'true') return [];
+  try {
+    const rows = await prisma.$queryRawUnsafe<
+      Array<{
+        level: string;
+        campaign: string;
+        creative: string | null;
+        cost: number;
+        conversions: number;
+        cpl: number | null;
+        ctr: number | null;
+        leadscore: number | null;
+        leads_a: number | null;
+        updated_at: Date;
+      }>
+    >(
+      `SELECT level, campaign, creative, cost::float8 AS cost, conversions::float8 AS conversions,
+              cpl::float8 AS cpl, ctr::float8 AS ctr, leadscore, leads_a, updated_at
+       FROM google_metrics ORDER BY level DESC, campaign, cost DESC`,
+    );
+    if (!rows.length) return [];
+
+    const updatedMs = Math.max(...rows.map((r) => new Date(r.updated_at).getTime()));
+    const ageMin = Math.round((Date.now() - updatedMs) / 60000);
+    const ageTxt = ageMin < 90 ? `há ${ageMin}min` : `há ${Math.round(ageMin / 60)}h`;
+    const stale = ageMin > 120;
+
+    const camps = rows.filter((r) => r.level === 'campaign');
+    const cres = rows.filter((r) => r.level === 'creative');
+    const totCost = camps.reduce((a, r) => a + r.cost, 0);
+    const totConv = camps.reduce((a, r) => a + r.conversions, 0);
+
+    return [
+      ``,
+      `MÉTRICAS GOOGLE ADS (YouTube) — atualizado ${ageTxt} (tabela google_metrics; métricas=hoje, leadscore=acumulado):`,
+      stale
+        ? `⚠️ Dado de gasto possivelmente DEFASADO (${ageTxt}) — avise que o gasto/CPL do Google pode estar velho.`
+        : ``,
+      `- Total Google: gasto ${money(totCost)} · conversões ${Math.round(totConv)} · CPL ${totConv > 0 ? money(totCost / totConv) : 'n/d'}`,
+      `Por campanha:`,
+      ...camps.map(
+        (r) =>
+          `- ${r.campaign}: gasto ${money(r.cost)} · conv ${Math.round(r.conversions)} · CPL ${r.cpl != null ? money(r.cpl) : 'n/d'} · CTR ${r.ctr != null ? r.ctr.toFixed(2) + '%' : 'n/d'} · leadscore ${r.leadscore ?? 'n/d'} (A=${r.leads_a ?? 0})`,
+      ),
+      `Por criativo (gasto Google + leadscore da nossa base):`,
+      ...cres.map(
+        (r) =>
+          `- ${r.campaign}/${r.creative}: gasto ${money(r.cost)} · conv ${Math.round(r.conversions)} · CPL ${r.cpl != null ? money(r.cpl) : 'n/d'} · score ${r.leadscore ?? 'n/d'} (A=${r.leads_a ?? 0})`,
+      ),
+      `⚠️ Gasto/CPL do Google vêm da tabela google_metrics (atualizada ~de hora em hora; pode defasar até ~1h). Os LEADS do Google já estão na base em tempo real (contam no total de captação acima). Connect Rate não existe no Google Ads (n/d). O Meta segue sendo a fonte separada e principal.`,
+    ].filter(Boolean);
+  } catch {
+    return [];
+  }
 }
 
 export async function buildScheduledReport(): Promise<string> {
