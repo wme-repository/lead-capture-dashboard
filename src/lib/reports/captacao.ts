@@ -4,6 +4,7 @@ import {
   getCampaignList,
   getConjuntoPacing,
   getSpendToday,
+  getSpendYesterday,
   type LpAdMetrics,
   type MetaCampaign,
   type ConjuntoPacing,
@@ -115,7 +116,7 @@ export async function getScheduledSnapshot(): Promise<ScheduledSnapshot> {
 
 // Plain-text data snapshot for the Q&A assistant context.
 export async function getQaContext(): Promise<string> {
-  const [s, sources, ad, campaigns, pacing, ultimosLeads, gastoHoje] = await Promise.all([
+  const [s, sources, ad, campaigns, pacing, ultimosLeads, gastoHoje, gastoOntem] = await Promise.all([
     getScheduledSnapshot(),
     prisma.source.findMany({ select: { slug: true, sheetsId: true } }),
     getAdMetricsByLp().catch((): Record<string, LpAdMetrics> => ({})),
@@ -128,6 +129,7 @@ export async function getQaContext(): Promise<string> {
       select: { name: true, email: true, lp: true, receivedAt: true },
     }),
     getSpendToday().catch((): number | null => null),
+    getSpendYesterday().catch((): number | null => null),
   ]);
 
   // Projeção de gasto do dia (orçamento diário = TETO). Dia-conta do Meta em PDT
@@ -236,6 +238,7 @@ export async function getQaContext(): Promise<string> {
     `- ${orcamento}`,
     `- Orçamento DIÁRIO: R$ 6.300/dia (soma dos 30 conjuntos). É um TETO — o Meta NÃO ultrapassa o orçamento diário de forma relevante (no máximo ~25% num dia isolado, compensado nos outros dias pra média bater o diário). Então o gasto por dia tende a ficar em torno de R$ 6.300 e NÃO dispara/foge do controle. ATENÇÃO: o "Gasto" informado acima é ACUMULADO desde o início do lançamento (22/06), NÃO o gasto só de hoje — não compare o acumulado direto com o orçamento diário ao responder se "vai ultrapassar".`,
     `- Gasto de HOJE (dia atual, reseta 04:00 BRT): ${gastoHoje == null ? 'n/d' : `${money(gastoHoje)} de R$ 6.300 (${pct(gastoHoje, DAILY_BUDGET)}% do orçamento diário)`} · dia decorrido: ${fracPct}%`,
+    `- Gasto de ONTEM (Meta, dia-conta completo): ${gastoOntem == null ? 'n/d' : money(gastoOntem)}${gastoOntem != null && s.capt.ontem > 0 ? ` · CPL de ontem ≈ ${money(gastoOntem / s.capt.ontem)} (gasto Meta de ontem ÷ ${s.capt.ontem} leads de ontem)` : ''}`,
     `- Projeção do gasto de hoje (para "vai ultrapassar o orçamento?"): ${projecaoLinha}`,
     ``,
     `Leads no GERENCIADOR do Meta (atribuídos pelo pixel): ${hasAd ? `total ${metaLeadsTotal}${metaLeadsByLp ? ` (${metaLeadsByLp})` : ''}` : 'n/d'}`,

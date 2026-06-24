@@ -359,10 +359,10 @@ export async function getAdMetricsByLp(): Promise<Record<string, LpAdMetrics>> {
   return out;
 }
 
-// Gasto de HOJE (dia-conta do Meta) das campanhas [PROJETOTRT2]. Escopa pelos
+// Gasto das campanhas [PROJETOTRT2] num período (date_preset do Meta). Escopa pelos
 // IDs da tag (mesma razão do getAdMetricsByLp: conta tem milhares de campanhas).
 // Retorna null se não configurado/sem campanhas.
-export async function getSpendToday(): Promise<number | null> {
+async function getSpendForPreset(datePreset: string): Promise<number | null> {
   if (!TOKEN || !ACCT) return null;
 
   const campaigns = await fetchAllPaged<{ id?: string; name?: string }>(
@@ -377,7 +377,13 @@ export async function getSpendToday(): Promise<number | null> {
     JSON.stringify([{ field: 'campaign.id', operator: 'IN', value: ids }]),
   );
   const rows = await fetchAllPaged<{ spend?: string }>(
-    `${GRAPH}/${ACCT}/insights?level=campaign&fields=spend&date_preset=today&filtering=${filtering}&limit=200&access_token=${TOKEN}`,
+    `${GRAPH}/${ACCT}/insights?level=campaign&fields=spend&date_preset=${datePreset}&filtering=${filtering}&limit=200&access_token=${TOKEN}`,
   );
   return rows.reduce((sum, r) => sum + (parseFloat(r.spend ?? '0') || 0), 0);
 }
+
+// Gasto de HOJE (dia-conta do Meta) das campanhas [PROJETOTRT2].
+export const getSpendToday = (): Promise<number | null> => getSpendForPreset('today');
+
+// Gasto de ONTEM (dia-conta do Meta) das campanhas [PROJETOTRT2].
+export const getSpendYesterday = (): Promise<number | null> => getSpendForPreset('yesterday');
