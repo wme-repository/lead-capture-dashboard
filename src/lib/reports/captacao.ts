@@ -345,6 +345,44 @@ async function getGoogleLines(): Promise<string[]> {
   }
 }
 
+// Bloco compacto do Google p/ o relatório agendado (4x/dia). Mesma fonte (google_metrics),
+// fail-open + flag. Campanha-level só, pra manter o relatório enxuto.
+async function getGoogleReportLines(): Promise<string[]> {
+  if (process.env.GOOGLE_CONTEXT_ENABLED !== 'true') return [];
+  try {
+    const rows = await prisma.$queryRawUnsafe<
+      Array<{ campaign: string; cost: number; conversions: number; cpl: number | null; updated_at: Date }>
+    >(
+      `SELECT campaign, cost::float8 AS cost, conversions::float8 AS conversions, cpl::float8 AS cpl, updated_at
+       FROM google_metrics WHERE level='campaign' ORDER BY cpl ASC NULLS LAST`,
+    );
+    if (!rows.length) return [];
+    const updatedMs = Math.max(...rows.map((r) => new Date(r.updated_at).getTime()));
+    const ageMin = Math.round((Date.now() - updatedMs) / 60000);
+    const ageTxt = ageMin < 90 ? `há ${ageMin}min` : `há ${Math.round(ageMin / 60)}h`;
+    const totCost = rows.reduce((a, r) => a + r.cost, 0);
+    const totConv = rows.reduce((a, r) => a + r.conversions, 0);
+    const EMO: Record<string, string> = { tribunal: '🟢', engajamento: '🟡', visitantes: '🔴' };
+    const winner = rows[0]?.campaign;
+    const lines = rows.map(
+      (r) =>
+        `${EMO[r.campaign] ?? '⚫'} ${r.campaign}: ${money(r.cost)} · ${Math.round(r.conversions)} leads · CPL ${r.cpl != null ? money(r.cpl) : 'n/d'}${r.campaign === winner ? ' 🏆' : ''}`,
+    );
+    return [
+      ``,
+      '━━━━━━━━━━━━━━',
+      ``,
+      `🔎 Google Ads (YouTube) · ${ageTxt}`,
+      ``,
+      `Total: ${money(totCost)} · ${Math.round(totConv)} leads · CPL ${totConv > 0 ? money(totCost / totConv) : 'n/d'}`,
+      ...lines,
+      ageMin > 120 ? '⚠️ gasto pode estar defasado' : '',
+    ].filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export async function buildScheduledReport(): Promise<string> {
   const [s, ad] = await Promise.all([
     getScheduledSnapshot(),
@@ -405,6 +443,8 @@ export async function buildScheduledReport(): Promise<string> {
       } · Falta: ${money(falta)}${pctFalta != null ? ` (${pctFalta.toFixed(1)}%)` : ''}`
     : `Gasto: ${money(hasAd ? totalSpend : null)}`;
 
+  const googleReport = await getGoogleReportLines();
+
   // Rule-based action
   let acao: string;
   if (s.semLpPct >= 30) {
@@ -452,6 +492,7 @@ export async function buildScheduledReport(): Promise<string> {
     `🟢 A: ${s.faixas.A} · 🔵 B: ${s.faixas.B} · 🟡 C: ${s.faixas.C} · 🔴 D: ${s.faixas.D}`,
     ``,
     `🏆 A+B: ${q.qualificados} · 💵 custo A+B: ${money(custoAB)}`,
+    ...googleReport,
     ``,
     sep,
     ``,
