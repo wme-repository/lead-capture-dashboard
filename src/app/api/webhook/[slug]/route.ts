@@ -53,6 +53,21 @@ function urlFromUserAgent(ua: string): string | null {
   return m ? m[0] : null;
 }
 
+// Alguns posicionamentos do Meta (ex.: Facebook Right Column) entregam os valores
+// de UTM re-encodados: espaço vira "+" e sobram %XX. Normaliza na entrada para que
+// todas as campanhas gravem no formato canônico ("26 - [ESQ] ...", "ANIM 01").
+// Valores já corretos passam intactos (não contêm "+" nem "%").
+function normalizeUtm(v: string | null | undefined): string | null {
+  if (!v) return null;
+  let s = v.replace(/\+/g, " ");
+  try {
+    s = decodeURIComponent(s);
+  } catch {
+    // % solto (não é encoding válido) — mantém como está
+  }
+  return s;
+}
+
 function firstValue(
   raw: Record<string, unknown>,
   keys: string[],
@@ -210,11 +225,11 @@ export async function POST(
           paginaCaptura,
           pesquisa: d.pesquisa ?? null,
           grupo: d.grupo ?? null,
-          utmSource: d.utm_source ?? utms.utm_source ?? null,
-          utmMedium: d.utm_medium ?? utms.utm_medium ?? null,
-          utmCampaign: d.utm_campaign ?? utms.utm_campaign ?? null,
-          utmTerm: d.utm_term ?? utms.utm_term ?? null,
-          utmContent: d.utm_content ?? utms.utm_content ?? null,
+          utmSource: normalizeUtm(d.utm_source ?? utms.utm_source),
+          utmMedium: normalizeUtm(d.utm_medium ?? utms.utm_medium),
+          utmCampaign: normalizeUtm(d.utm_campaign ?? utms.utm_campaign),
+          utmTerm: normalizeUtm(d.utm_term ?? utms.utm_term),
+          utmContent: normalizeUtm(d.utm_content ?? utms.utm_content),
           lp,
           status: "pending",
         };
